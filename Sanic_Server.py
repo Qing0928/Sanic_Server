@@ -29,7 +29,6 @@ def db_modify(sql):
     with db_conn.cursor() as cur:
         cur.execute(sql)
     db_conn.commit()
-    return 'done'
 #-----------------------------------------------------------------------------------------------------
 #just for test
 @app.get("/test")
@@ -302,6 +301,7 @@ async def duel_start(request):
         if int(id) != 0:#team fight
             sql = 'CREATE TABLE IF NOT EXISTS `team_' + str(id) + '`' + \
                     '(`count` int AUTO_INCREMENT PRIMARY KEY NOT NULL, \
+                        `account` varchar(40) NOT NULL,  \
                         `enhance_sk1` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk2` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk3` int NOT NULL DEFAULT \'0\', \
@@ -318,13 +318,13 @@ async def duel_start(request):
                         `drop_de1` int NOT NULL DEFAULT \'0\', \
                         `drop_de2` int NOT NULL DEFAULT \'0\', \
                         `drop_sk1` int NOT NULL DEFAULT \'0\', \
-                        `drop_sk2` int NOT NULL DEFAULT \'0\', \
-                        `time` date \
+                        `drop_sk2` int NOT NULL DEFAULT \'0\' \
                         )'
             db_modify(sql)
         else:#solo
             sql = 'CREATE TABLE IF NOT EXISTS `team_' + account + '`' + \
                     '(`count` int AUTO_INCREMENT PRIMARY KEY NOT NULL, \
+                        `account` varchar(40) NOT NULL,  \
                         `enhance_sk1` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk2` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk3` int NOT NULL DEFAULT \'0\', \
@@ -341,8 +341,7 @@ async def duel_start(request):
                         `drop_de1` int NOT NULL DEFAULT \'0\', \
                         `drop_de2` int NOT NULL DEFAULT \'0\', \
                         `drop_sk1` int NOT NULL DEFAULT \'0\', \
-                        `drop_sk2` int NOT NULL DEFAULT \'0\', \
-                        `time` date \
+                        `drop_sk2` int NOT NULL DEFAULT \'0\' \
                         )'
             db_modify(sql)
         return text('done')
@@ -350,10 +349,35 @@ async def duel_start(request):
         print(str(e))
         return text("Explode")
 
-@app.post("/commit_fight_data")
-async def commit_fight_data(request):
+@app.post("/commit_status_data")
+async def commit_status_data(request):
     try:
-        print(type(request.json))
+        id = request.json['id']
+        start = time.time()
+        fdata = request.json #type of fdata is dict
+        l_fdata = list(fdata.keys()) #transfer keys of fdata into list
+        sql_col = ''
+        sql_val = ''
+        for i in range (0, len(l_fdata)):
+            if l_fdata[i] == 'id':
+                continue
+            if i < (len(fdata) - 1):
+                sql_col += l_fdata[i] + ','
+                sql_val += '\'' + str(fdata[l_fdata[i]]) + '\'' + ','
+            else:
+                sql_col += l_fdata[i]
+                sql_val += '\'' + str(fdata[l_fdata[i]]) + '\''
+            #sql_col = account,enhance_sk1,enhance_de2,gather,sleep,drop_de2
+            #sql_val = 'test02','1','1','3','3','1'
+        sql = 'ALTER TABLE `team_' + str(id) + '`' + 'AUTO_INCREMENT=1'#avoid count jump
+        db_modify(sql)
+        sql = 'INSERT INTO `team_' + str(id) + '`' + \
+                ' (' + sql_col + ') VALUES' +\
+                ' (' + sql_val + ')' 
+        db_modify(sql)
+        end = time.time()
+        cost = end - start
+        print('time cost:' + str(round(cost*1000, 3)) + 'ms')
         return text('done')
     except Exception as e:
         print(str(e))
