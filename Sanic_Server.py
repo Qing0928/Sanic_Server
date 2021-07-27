@@ -3,7 +3,7 @@ from sanic.response import json, text
 import pymysql.cursors
 from random import randint
 import time
-import datetime
+import threading
 
 db_conn = pymysql.Connect(host='127.0.0.1', user='pmauser', password='game0934', 
                         db='game_sql', cursorclass=pymysql.cursors.DictCursor)
@@ -29,6 +29,11 @@ def db_modify(sql):
     with db_conn.cursor() as cur:
         cur.execute(sql)
     db_conn.commit()
+
+def batch(id):
+    sql = 'SELECT `count` FROM `team_' + str(id) + '`'
+    result = db_search_all(sql)
+
 #-----------------------------------------------------------------------------------------------------
 #just for test
 @app.get("/test")
@@ -171,6 +176,17 @@ async def select_career(request):
     except Exception as e:
         print(str(e))
         return text("Explode")
+
+@app.post("get_career")
+async def get_career(request):
+    try:
+        account = request.json['account']
+        sql = 'SELECT `career` FROM `user_skill` WHERE account=' + '\'' + account + '\''
+        result = db_search_one(sql)
+        return json(result)
+    except Exception as e:
+        print(e)
+        return text("Explode")
 #-----------------------------------------------------------------------------------------------------
 #about status issue
 @app.post("/change_status")
@@ -296,12 +312,12 @@ async def duel_start(request):
         id = result['team_id']
         sql = 'UPDATE `user_info` SET `play_status`=1 WHERE team_id=' + str(id)
         db_modify(sql)
-        #create table to store fight data
-        #TABLENAME team_`team_id` or team_`account`
+        #create table to store status data
+        #TABLENAME team_`commit_id` or commit_`account`
         if int(id) != 0:#team fight
-            sql = 'CREATE TABLE IF NOT EXISTS `team_' + str(id) + '`' + \
-                    '(`count` int AUTO_INCREMENT PRIMARY KEY NOT NULL, \
-                        `account` varchar(40) NOT NULL,  \
+            sql = 'CREATE TABLE IF NOT EXISTS `commit_' + str(id) + '`' + \
+                    '( \
+                        `account` varchar(40) PRIMARY KEY NOT NULL,  \
                         `enhance_sk1` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk2` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk3` int NOT NULL DEFAULT \'0\', \
@@ -321,10 +337,16 @@ async def duel_start(request):
                         `drop_sk2` int NOT NULL DEFAULT \'0\' \
                         )'
             db_modify(sql)
+            sql = 'SELECT * FROM `teams` WHERE leader=' + '\'' + account + '\''
+            result = db_search_one(sql)
+            for i in range (0, 4):
+                tar = list(result.keys())
+                sql = 'INSERT INTO `commit_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
+                db_modify(sql)
         else:#solo
-            sql = 'CREATE TABLE IF NOT EXISTS `team_' + account + '`' + \
-                    '(`count` int AUTO_INCREMENT PRIMARY KEY NOT NULL, \
-                        `account` varchar(40) NOT NULL,  \
+            sql = 'CREATE TABLE IF NOT EXISTS `commit_' + account + '`' + \
+                    '( \
+                        `account` varchar(40) PRIMARY KEY NOT NULL,  \
                         `enhance_sk1` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk2` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk3` int NOT NULL DEFAULT \'0\', \
@@ -343,6 +365,8 @@ async def duel_start(request):
                         `drop_sk1` int NOT NULL DEFAULT \'0\', \
                         `drop_sk2` int NOT NULL DEFAULT \'0\' \
                         )'
+            db_modify(sql)
+            sql = 'INSERT INTO `team_' + account + '`' + ' (account) VALUES (\'' + account + '\')'
             db_modify(sql)
         return text('done')
     except Exception as e:
@@ -353,32 +377,33 @@ async def duel_start(request):
 async def commit_status_data(request):
     try:
         id = request.json['id']
+        account = request.json['account']
         start = time.time()
         fdata = request.json #type of fdata is dict
         l_fdata = list(fdata.keys()) #transfer keys of fdata into list
-        sql_col = ''
-        sql_val = ''
+        sql_update = ''
+        #create update values
         for i in range (0, len(l_fdata)):
             if l_fdata[i] == 'id':
                 continue
-            if i < (len(fdata) - 1):
-                sql_col += l_fdata[i] + ','
-                sql_val += '\'' + str(fdata[l_fdata[i]]) + '\'' + ','
+            elif i <(len(fdata) - 1):
+                sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\'' + ','
             else:
-                sql_col += l_fdata[i]
-                sql_val += '\'' + str(fdata[l_fdata[i]]) + '\''
-            #sql_col = account,enhance_sk1,enhance_de2,gather,sleep,drop_de2
-            #sql_val = 'test02','1','1','3','3','1'
-        sql = 'ALTER TABLE `team_' + str(id) + '`' + 'AUTO_INCREMENT=1'#avoid count jump
-        db_modify(sql)
-        sql = 'INSERT INTO `team_' + str(id) + '`' + \
-                ' (' + sql_col + ') VALUES' +\
-                ' (' + sql_val + ')' 
+                sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\''
+        sql = 'UPDATE `commit_' + str(id) + '`' + ' SET ' + sql_update + ' WHERE account=' + '\'' + account + '\''
         db_modify(sql)
         end = time.time()
         cost = end - start
         print('time cost:' + str(round(cost*1000, 3)) + 'ms')
         return text('done')
+    except Exception as e:
+        print(str(e))
+        return text("Explode")
+
+@app.post("user_action")
+async def user_action(request):
+    try:
+        return
     except Exception as e:
         print(str(e))
         return text("Explode")
