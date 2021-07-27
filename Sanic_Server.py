@@ -305,6 +305,7 @@ async def get_team_member(request):
 @app.post("/duel_start")
 async def duel_start(request):
     try:
+        start = time.time()
         account = request.json['account']#account of leader
         #force change user play_status 
         sql = 'SELECT `team_id` FROM `user_info` WHERE account=' + '\'' + account + '\''
@@ -315,9 +316,10 @@ async def duel_start(request):
         #create table to store status data
         #TABLENAME team_`commit_id` or commit_`account`
         if int(id) != 0:#team fight
-            sql = 'CREATE TABLE IF NOT EXISTS `commit_' + str(id) + '`' + \
+            #create status table
+            sql = 'CREATE TABLE IF NOT EXISTS `status_' + str(id) + '`' + \
                     '( \
-                        `account` varchar(40) PRIMARY KEY NOT NULL,  \
+                        `account` varchar(40) PRIMARY KEY NOT NULL, \
                         `enhance_sk1` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk2` int NOT NULL DEFAULT \'0\', \
                         `enhance_sk3` int NOT NULL DEFAULT \'0\', \
@@ -341,10 +343,20 @@ async def duel_start(request):
             result = db_search_one(sql)
             for i in range (0, 4):
                 tar = list(result.keys())
-                sql = 'INSERT INTO `commit_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
+                sql = 'INSERT INTO `status_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
+                db_modify(sql)
+            sql = 'CREATE TABLE IF NOT EXISTS `action_' + str(id) + '`' + \
+                    '( \
+                        `account` varchar(40) PRIMARY KEY NOT NULL, \
+                        `action` varchar(40) NOT NULL DEFAULT \'\' \
+                    )'
+            db_modify(sql)
+            for i in range (0, 4):
+                tar = list(result.keys())
+                sql = 'INSERT INTO `action_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
                 db_modify(sql)
         else:#solo
-            sql = 'CREATE TABLE IF NOT EXISTS `commit_' + account + '`' + \
+            sql = 'CREATE TABLE IF NOT EXISTS `status_' + account + '`' + \
                     '( \
                         `account` varchar(40) PRIMARY KEY NOT NULL,  \
                         `enhance_sk1` int NOT NULL DEFAULT \'0\', \
@@ -366,8 +378,18 @@ async def duel_start(request):
                         `drop_sk2` int NOT NULL DEFAULT \'0\' \
                         )'
             db_modify(sql)
-            sql = 'INSERT INTO `team_' + account + '`' + ' (account) VALUES (\'' + account + '\')'
+            sql = 'INSERT INTO `status_' + account + '`' + ' (account) VALUES (\'' + account + '\')'
             db_modify(sql)
+            sql = 'CREATE TABLE IF NOT EXISTS `action_' + str(account) + '`' + \
+                    '( \
+                        `account` varchar(40) PRIMARY KEY NOT NULL, \
+                        `action` varchar(40) NOT NULL DEFAULT \'\' \
+                    )'
+            db_modify(sql)
+            sql = 'INSERT INTO `action_' + account + '`' + ' (account) VALUES (\'' + account + '\')'
+        end = time.time()
+        cost = end - start
+        print('time cost:' + str(round(cost*1000, 3)) + 'ms')
         return text('done')
     except Exception as e:
         print(str(e))
@@ -390,7 +412,7 @@ async def commit_status_data(request):
                 sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\'' + ','
             else:
                 sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\''
-        sql = 'UPDATE `commit_' + str(id) + '`' + ' SET ' + sql_update + ' WHERE account=' + '\'' + account + '\''
+        sql = 'UPDATE `status_' + str(id) + '`' + ' SET ' + sql_update + ' WHERE account=' + '\'' + account + '\''
         db_modify(sql)
         end = time.time()
         cost = end - start
@@ -400,9 +422,11 @@ async def commit_status_data(request):
         print(str(e))
         return text("Explode")
 
-@app.post("user_action")
+@app.post("/commit_user_action")
 async def user_action(request):
     try:
+        account = request.json['account']
+        
         return
     except Exception as e:
         print(str(e))
