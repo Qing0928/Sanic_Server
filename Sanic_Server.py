@@ -3,7 +3,7 @@ from sanic.response import json, text
 import pymysql.cursors
 from random import randint
 import time
-import threading
+import json as js
 
 db_conn = pymysql.Connect(host='127.0.0.1', user='pmauser', password='game0934', 
                         db='game_sql', cursorclass=pymysql.cursors.DictCursor)
@@ -315,78 +315,48 @@ async def duel_start(request):
         db_modify(sql)
         #create table to store status data
         #TABLENAME team_`commit_id` or commit_`account`
-        if int(id) != 0:#team fight
-            #create status table
-            sql = 'CREATE TABLE IF NOT EXISTS `status_' + str(id) + '`' + \
-                    '( \
-                        `account` varchar(40) PRIMARY KEY NOT NULL, \
-                        `enhance_sk1` int NOT NULL DEFAULT \'0\', \
-                        `enhance_sk2` int NOT NULL DEFAULT \'0\', \
-                        `enhance_sk3` int NOT NULL DEFAULT \'0\', \
-                        `enhance_sk4` int NOT NULL DEFAULT \'0\', \
-                        `enhance_de1` int NOT NULL DEFAULT \'0\', \
-                        `enhance_de2` int NOT NULL DEFAULT \'0\', \
-                        `enhance_de3` int NOT NULL DEFAULT \'0\', \
-                        `gather` int NOT NULL DEFAULT \'0\', \
-                        `immortal` int NOT NULL DEFAULT \'0\', \
-                        `numb` int NOT NULL DEFAULT \'0\', \
-                        `sleep` int NOT NULL DEFAULT \'0\', \
-                        `poison` int NOT NULL DEFAULT \'0\', \
-                        `blood` int NOT NULL DEFAULT \'0\', \
-                        `drop_de1` int NOT NULL DEFAULT \'0\', \
-                        `drop_de2` int NOT NULL DEFAULT \'0\', \
-                        `drop_sk1` int NOT NULL DEFAULT \'0\', \
-                        `drop_sk2` int NOT NULL DEFAULT \'0\' \
-                        )'
+        sql = 'CREATE TABLE IF NOT EXISTS `status_' + str(id) + '`' + \
+                '( \
+                    `account` varchar(40) PRIMARY KEY NOT NULL, \
+                    `enhance_sk1` int NOT NULL DEFAULT \'0\', \
+                    `enhance_sk2` int NOT NULL DEFAULT \'0\', \
+                    `enhance_sk3` int NOT NULL DEFAULT \'0\', \
+                    `enhance_sk4` int NOT NULL DEFAULT \'0\', \
+                    `enhance_de1` int NOT NULL DEFAULT \'0\', \
+                    `enhance_de2` int NOT NULL DEFAULT \'0\', \
+                    `enhance_de3` int NOT NULL DEFAULT \'0\', \
+                    `gather` int NOT NULL DEFAULT \'0\', \
+                    `immortal` int NOT NULL DEFAULT \'0\', \
+                    `numb` int NOT NULL DEFAULT \'0\', \
+                    `sleep` int NOT NULL DEFAULT \'0\', \
+                    `poison` int NOT NULL DEFAULT \'0\', \
+                    `blood` int NOT NULL DEFAULT \'0\', \
+                    `drop_de1` int NOT NULL DEFAULT \'0\', \
+                    `drop_de2` int NOT NULL DEFAULT \'0\', \
+                    `drop_sk1` int NOT NULL DEFAULT \'0\', \
+                    `drop_sk2` int NOT NULL DEFAULT \'0\' \
+                )'
+        db_modify(sql)
+        sql = 'SELECT * FROM `teams` WHERE leader=' + '\'' + account + '\''
+        result = db_search_one(sql)
+        for i in range (0, len(result)):
+            tar = list(result.keys())
+            sql = 'INSERT INTO `status_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
             db_modify(sql)
-            sql = 'SELECT * FROM `teams` WHERE leader=' + '\'' + account + '\''
-            result = db_search_one(sql)
-            for i in range (0, 4):
-                tar = list(result.keys())
-                sql = 'INSERT INTO `status_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
-                db_modify(sql)
-            sql = 'CREATE TABLE IF NOT EXISTS `action_' + str(id) + '`' + \
-                    '( \
-                        `account` varchar(40) PRIMARY KEY NOT NULL, \
-                        `action` varchar(40) NOT NULL DEFAULT \'\' \
-                    )'
-            db_modify(sql)
-            for i in range (0, 4):
-                tar = list(result.keys())
-                sql = 'INSERT INTO `action_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
-                db_modify(sql)
-        else:#solo
-            sql = 'CREATE TABLE IF NOT EXISTS `status_' + account + '`' + \
-                    '( \
-                        `account` varchar(40) PRIMARY KEY NOT NULL,  \
-                        `enhance_sk1` int NOT NULL DEFAULT \'0\', \
-                        `enhance_sk2` int NOT NULL DEFAULT \'0\', \
-                        `enhance_sk3` int NOT NULL DEFAULT \'0\', \
-                        `enhance_sk4` int NOT NULL DEFAULT \'0\', \
-                        `enhance_de1` int NOT NULL DEFAULT \'0\', \
-                        `enhance_de2` int NOT NULL DEFAULT \'0\', \
-                        `enhance_de3` int NOT NULL DEFAULT \'0\', \
-                        `gather` int NOT NULL DEFAULT \'0\', \
-                        `immortal` int NOT NULL DEFAULT \'0\', \
-                        `numb` int NOT NULL DEFAULT \'0\', \
-                        `sleep` int NOT NULL DEFAULT \'0\', \
-                        `poison` int NOT NULL DEFAULT \'0\', \
-                        `blood` int NOT NULL DEFAULT \'0\', \
-                        `drop_de1` int NOT NULL DEFAULT \'0\', \
-                        `drop_de2` int NOT NULL DEFAULT \'0\', \
-                        `drop_sk1` int NOT NULL DEFAULT \'0\', \
-                        `drop_sk2` int NOT NULL DEFAULT \'0\' \
-                        )'
-            db_modify(sql)
-            sql = 'INSERT INTO `status_' + account + '`' + ' (account) VALUES (\'' + account + '\')'
-            db_modify(sql)
-            sql = 'CREATE TABLE IF NOT EXISTS `action_' + str(account) + '`' + \
+        sql = 'INSERT INTO `status_' + str(id) + '`' + ' (account) VALUES (\'boss\')'
+        db_modify(sql)
+        sql = 'CREATE TABLE IF NOT EXISTS `action_' + str(id) + '`' + \
                     '( \
                         `account` varchar(40) PRIMARY KEY NOT NULL, \
                         `action` varchar(40) NOT NULL DEFAULT \'\' \
                     )'
+        db_modify(sql)
+        for i in range (0, len(result)):
+            tar = list(result.keys())
+            sql = 'INSERT INTO `action_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
             db_modify(sql)
-            sql = 'INSERT INTO `action_' + account + '`' + ' (account) VALUES (\'' + account + '\')'
+        sql = 'INSERT INTO `action_' + str(id) + '`' + ' (account) VALUES (\'boss\')'
+        db_modify(sql)
         end = time.time()
         cost = end - start
         print('time cost:' + str(round(cost*1000, 3)) + 'ms')
@@ -401,18 +371,22 @@ async def commit_status_data(request):
         id = request.json['id']
         account = request.json['account']
         start = time.time()
+        #fdata is status json
         fdata = request.json #type of fdata is dict
+        #key of fdata is status name 
         l_fdata = list(fdata.keys()) #transfer keys of fdata into list
         sql_update = ''
         #create update values
         for i in range (0, len(l_fdata)):
-            if l_fdata[i] == 'id':
+            if l_fdata[i] == 'id' or 'account':
                 continue
             elif i <(len(fdata) - 1):
-                sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\'' + ','
+                sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\'' + ',' 
+                #`column`=`values`,
             else:
                 sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\''
         sql = 'UPDATE `status_' + str(id) + '`' + ' SET ' + sql_update + ' WHERE account=' + '\'' + account + '\''
+        #sql = UPDATE `status_id` SET col1=val1, col2=val2... WHERE `account`=account
         db_modify(sql)
         end = time.time()
         cost = end - start
@@ -422,12 +396,60 @@ async def commit_status_data(request):
         print(str(e))
         return text("Explode")
 
+@app.post("/get_last_status")
+async def get_last_status(request):
+    try:
+        account = request.json['account']
+        id = request.json['id']
+        sql = 'SELECT * FROM `status_' + str(id) + '`' + ' WHERE account=' + '\'' + account + '\''
+        result = db_search_one(sql)
+        return json(result)
+    except Exception as e:
+        print(str(e))
+        return text("Explode")
+
 @app.post("/commit_user_action")
 async def user_action(request):
     try:
         account = request.json['account']
-        
-        return
+        act = request.json['act']
+        id = request.json['id']
+        sql = 'UPDATE `action_' + str(id) + '`' + ' SET action=' + '\'' + act + '\'' + ' WHERE account=' + '\'' + account + '\''
+        db_modify(sql)
+        return text("done")
+    except Exception as e:
+        print(str(e))
+        return text("Explode")
+
+@app.post("/get_action")
+async def get_action(request):
+    try:
+        id = request.json['id']
+        sql = 'SELECT * FROM `action_' + str(id) + '`'
+        result = db_search_all(sql)
+        data = '{\"act\":['
+        for i in range(0, len(result)):
+            tar = result[i]#dict
+            if tar['action'] == '':
+                return text("batching")
+            elif i < len(result) - 1:
+                data += js.dumps(tar) + ','
+            else:
+                data += js.dumps(tar)
+        data += ']}'
+        return text(data)
+    except Exception as e:
+        print(str(e))
+        return text("Explode")
+
+@app.post("/end_turn")
+async def end_turn(request):
+    try:
+        id = request.json['id']
+        account = request.json['account']
+        sql = 'UPDATE `action_' + str(id) + '`' + ' SET action=\'\' WHERE account=' + '\'' + account + '\''
+        db_modify(sql)
+        return text("done")
     except Exception as e:
         print(str(e))
         return text("Explode")
