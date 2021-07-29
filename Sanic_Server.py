@@ -1,3 +1,4 @@
+from datetime import datetime
 from sanic import Sanic
 from sanic.response import json, text
 import pymysql.cursors
@@ -448,6 +449,32 @@ async def end_turn(request):
         id = request.json['id']
         account = request.json['account']
         sql = 'UPDATE `action_' + str(id) + '`' + ' SET action=\'\' WHERE account=' + '\'' + account + '\''
+        db_modify(sql)
+        return text("done")
+    except Exception as e:
+        print(str(e))
+        return text("Explode")
+
+@app.post("/finish_game")
+async def finish_game(request):
+    try:
+        account = request.json['account']
+        id = request.json['id']
+        data = request.json['data']
+        sql = 'UPDATE `user_info` SET play_status=0 WHERE account=' + '\'' + account + '\''
+        db_modify(sql)
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        sql = 'INSERT INTO `reward` (account, team_id, data, time) VALUES ( ' + \
+                '\'' + account + '\',' + \
+                '\'' + str(id) + '\',' + \
+                '\'' + str(data) + '\',' + \
+                '\'' + now + '\'' + \
+                ')'
+        print(sql)
+        db_modify(sql)
+        sql = 'DROP TABLE IF EXISTS `action_' + str(id) + '`'
+        db_modify(sql)
+        sql = 'DROP TABLE IF EXISTS `status_' + str(id) + '`'
         db_modify(sql)
         return text("done")
     except Exception as e:
