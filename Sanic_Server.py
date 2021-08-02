@@ -30,11 +30,6 @@ def db_modify(sql):
     with db_conn.cursor() as cur:
         cur.execute(sql)
     db_conn.commit()
-
-def batch(id):
-    sql = 'SELECT `count` FROM `team_' + str(id) + '`'
-    result = db_search_all(sql)
-
 #-----------------------------------------------------------------------------------------------------
 #just for test
 @app.get("/test")
@@ -307,18 +302,19 @@ async def get_team_member(request):
 async def duel_start(request):
     try:
         start = time.time()
-        account = request.json['account']#account of leader
-        #force change user play_status 
+        #account of leader
+        account = request.json['account']
+        #change user play_status 
         sql = 'SELECT `team_id` FROM `user_info` WHERE account=' + '\'' + account + '\''
         result = db_search_one(sql)
         id = result['team_id']
         sql = 'UPDATE `user_info` SET `play_status`=1 WHERE team_id=' + str(id)
         db_modify(sql)
         #create table to store status data
-        #TABLENAME team_`commit_id` or commit_`account`
         sql = 'CREATE TABLE IF NOT EXISTS `status_' + str(id) + '`' + \
                 '( \
                     `account` varchar(40) PRIMARY KEY NOT NULL, \
+                    `hp` int NOT NULL DEFAULT \'0\', \
                     `enhance_sk1` int NOT NULL DEFAULT \'0\', \
                     `enhance_sk2` int NOT NULL DEFAULT \'0\', \
                     `enhance_sk3` int NOT NULL DEFAULT \'0\', \
