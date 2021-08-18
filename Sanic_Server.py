@@ -5,6 +5,7 @@ import pymysql.cursors
 from random import randint
 import time
 import json as js
+import threading
 
 db_conn = pymysql.Connect(host='127.0.0.1', user='pmauser', password='game0934', 
                         db='game_sql', cursorclass=pymysql.cursors.DictCursor)
@@ -30,6 +31,12 @@ def db_modify(sql):
     with db_conn.cursor() as cur:
         cur.execute(sql)
     db_conn.commit()
+#-----------------------------------------------------------------------------------------------------
+#threading
+def batch_data(team_id):
+    sql = 'SELECT * FROM `action_' + str(team_id) + '`'
+    result = db_search_all(sql)
+    
 #-----------------------------------------------------------------------------------------------------
 #just for test
 @app.get("/test")
@@ -183,6 +190,17 @@ async def get_career(request):
     except Exception as e:
         print(e)
         return text("Explode")
+
+@app.post("/get_user_name")
+async def get_user_name(request):
+    try:
+        account = request.json['account']
+        sql = 'SELECT `name` FROM `user_info` WHERE account=\'{account}\''
+        result = db_search_one(sql.format(account=account))
+        return json(result)
+    except Exception as e:
+        print(str(e))
+        return text("Explode")
 #-----------------------------------------------------------------------------------------------------
 #about status issue
 @app.post("/change_status")
@@ -301,20 +319,20 @@ async def get_team_member(request):
 @app.post("/duel_start")
 async def duel_start(request):
     try:
-        start = time.time()
+        #start = time.time()
         #account of leader
         account = request.json['account']
         #change user play_status 
-        sql = 'SELECT `team_id` FROM `user_info` WHERE account=' + '\'' + account + '\''
-        result = db_search_one(sql)
+        sql = 'SELECT `team_id` FROM `user_info` WHERE account=\'{account}\''
+        result = db_search_one(sql.format(account=account))
         id = result['team_id']
-        sql = 'UPDATE `user_info` SET `play_status`=1 WHERE team_id=' + str(id)
-        db_modify(sql)
+        sql = 'UPDATE `user_info` SET `play_status`=1 WHERE team_id={id}'
+        db_modify(sql.format(id=id))
         #create table to store status data
-        sql = 'CREATE TABLE IF NOT EXISTS `status_' + str(id) + '`' + \
-                '( \
+        sql = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
                     `account` varchar(40) PRIMARY KEY NOT NULL, \
                     `hp` int NOT NULL DEFAULT \'0\', \
+                    `turn_stat` int NOT NULL DEFAULT \'0\', \
                     `enhance_sk1` int NOT NULL DEFAULT \'0\', \
                     `enhance_sk2` int NOT NULL DEFAULT \'0\', \
                     `enhance_sk3` int NOT NULL DEFAULT \'0\', \
@@ -333,30 +351,31 @@ async def duel_start(request):
                     `drop_sk1` int NOT NULL DEFAULT \'0\', \
                     `drop_sk2` int NOT NULL DEFAULT \'0\' \
                 )'
-        db_modify(sql)
-        sql = 'SELECT * FROM `teams` WHERE leader=' + '\'' + account + '\''
-        result = db_search_one(sql)
+        db_modify(sql.format(id=id))
+        sql = 'SELECT * FROM `teams` WHERE leader=\'{account}\''
+        result = db_search_one(sql.format(account=account))
         for i in range (0, len(result)):
             tar = list(result.keys())
-            sql = 'INSERT INTO `status_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
-            db_modify(sql)
-        sql = 'INSERT INTO `status_' + str(id) + '`' + ' (account) VALUES (\'boss\')'
-        db_modify(sql)
-        sql = 'CREATE TABLE IF NOT EXISTS `action_' + str(id) + '`' + \
-                    '( \
+            sql = 'INSERT INTO `status_{id}` (account) VALUES (\'' + str(result[tar[i]]) + '\')'
+            db_modify(sql.format(id=id))
+        sql = 'INSERT INTO `status_{id}` (account) VALUES (\'boss\')'
+        db_modify(sql.format(id=id))
+        sql = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
                         `account` varchar(40) PRIMARY KEY NOT NULL, \
-                        `action` varchar(40) NOT NULL DEFAULT \'\' \
+                        `action` varchar(40) NOT NULL DEFAULT \'\', \
+                        `target` varchar(40) NOT NULL DEFAULT \'\', \
+                        `fate` int NOT NULL DEFALT \'0\' \
                     )'
-        db_modify(sql)
+        db_modify(sql.format(id=id))
         for i in range (0, len(result)):
             tar = list(result.keys())
-            sql = 'INSERT INTO `action_' + str(id) + '`' + ' (account) VALUES (\'' + str(result[tar[i]]) + '\')'
-            db_modify(sql)
-        sql = 'INSERT INTO `action_' + str(id) + '`' + ' (account) VALUES (\'boss\')'
-        db_modify(sql)
-        end = time.time()
+            sql = 'INSERT INTO `action_{id}` (account) VALUES (\'' + str(result[tar[i]]) + '\')'
+            db_modify(sql.format(id=id))
+        sql = 'INSERT INTO `action_{id}` (account) VALUES (\'boss\')'
+        db_modify(sql.format(id=id))
+        '''end = time.time()
         cost = end - start
-        print('time cost:' + str(round(cost*1000, 3)) + 'ms')
+        print('time cost:' + str(round(cost*1000, 3)) + 'ms')'''
         return text('done')
     except Exception as e:
         print(str(e))
@@ -411,7 +430,9 @@ async def user_action(request):
         account = request.json['account']
         act = request.json['act']
         id = request.json['id']
-        sql = 'UPDATE `action_' + str(id) + '`' + ' SET action=' + '\'' + act + '\'' + ' WHERE account=' + '\'' + account + '\''
+        tar = request.json['tar']
+        set = ' SET action=' + '\'' + act + '\',' + 'target=' + '\'' + tar + '\''
+        sql = 'UPDATE `action_' + str(id) + '`' + set + ' WHERE account=' + '\'' + account + '\''
         db_modify(sql)
         return text("done")
     except Exception as e:
@@ -422,8 +443,8 @@ async def user_action(request):
 async def get_action(request):
     try:
         id = request.json['id']
-        sql = 'SELECT * FROM `action_' + str(id) + '`'
-        result = db_search_all(sql)
+        sql = 'SELECT `action` FROM `action_{id}`'
+        result = db_search_all(sql.format(id=id))
         data = '{\"act\":['
         for i in range(0, len(result)):
             tar = result[i]#dict
@@ -434,6 +455,7 @@ async def get_action(request):
             else:
                 data += js.dumps(tar)
         data += ']}'
+
         return text(data)
     except Exception as e:
         print(str(e))
