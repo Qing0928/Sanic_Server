@@ -32,6 +32,44 @@ def db_modify(sql):
         cur.execute(sql)
     db_conn.commit()
 #-----------------------------------------------------------------------------------------------------
+#skill_list
+#對自己以外的目標施放技能=>`account`=target
+#對自己施放技能=>`account`=account
+fighter = {
+    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
+    'skill_2':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_de3+2 WHERE `account`=\'{target}\'', 
+    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
+    'skill_31':'UPDATE `status_{team_id}` SET `numb`=numb+1 WHERE `account`=\'{target}\'', 
+    'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp*0.8 WHERE `account`=\'{target}\'', 
+    'skill_41':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`=\'{account}\''
+    }
+            
+traveler = {
+    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
+    'skill_2':'UPDATE `status_{team_id}` SET `enhance_sk1`=enhance_sk1+1 WHERE `account`=\'{target}\'', 
+    'skill_3':'UPDATE `status_{team_id}` SET `gather`=gather+1 WHERE `account`=\'{account}\'', 
+    'skill_31':'UPDATE `status_{team_id}` SET `numb`=numb+1 WHERE `account`=\'{target}\'', 
+    'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`drop_sk2`=drop_sk2+3 WHERE `account`=\'{target}\''
+    }
+
+magician = {
+    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
+    'skill_2':'UPDATE `status_{team_id}` SET `enhance_de1`=enhance_de1+1 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
+    'skill_31':'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+2 WHERE `account`=\'{account}\'', 
+    'skill_4':'UPDATE `status_{team_id}` SET `gather`=gather+2 WHERE `account`=\'{account}\'', 
+    'skill_41':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\''
+    }
+
+assistant = {
+    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_2':'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+2,`enhance_de2`=enhance_de2+2 WHERE `account`=\'{target}\'', 
+    'skill_3':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0,`status_lock`=2 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_31':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_4':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_41':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_sk2+5 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\''
+    }
+#-----------------------------------------------------------------------------------------------------
 #compute_action
 def compute_user_action(team_id):
     #取得玩家動作
@@ -162,44 +200,6 @@ def compute_user_action(team_id):
                     db_modify(sql)
         else:
             print('still have long way')      
-#-----------------------------------------------------------------------------------------------------
-#skill_list
-#對自己以外的目標施放技能=>`account`=target
-#對自己施放技能=>`account`=account
-fighter = {
-    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
-    'skill_2':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_de3+2 WHERE `account`=\'{target}\'', 
-    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
-    'skill_31':'UPDATE `status_{team_id}` SET `numb`=numb+1 WHERE `account`=\'{target}\'', 
-    'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp*0.8 WHERE `account`=\'{target}\'', 
-    'skill_41':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`=\'{account}\''
-    }
-            
-traveler = {
-    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
-    'skill_2':'UPDATE `status_{team_id}` SET `enhance_sk1`=enhance_sk1+1 WHERE `account`=\'{target}\'', 
-    'skill_3':'UPDATE `status_{team_id}` SET `gather`=gather+1 WHERE `account`=\'{account}\'', 
-    'skill_31':'UPDATE `status_{team_id}` SET `numb`=numb+1 WHERE `account`=\'{target}\'', 
-    'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`drop_sk2`=drop_sk2+3 WHERE `account`=\'{target}\''
-    }
-
-magician = {
-    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
-    'skill_2':'UPDATE `status_{team_id}` SET `enhance_de1`=enhance_de1+1 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
-    'skill_31':'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+2 WHERE `account`=\'{account}\'', 
-    'skill_4':'UPDATE `status_{team_id}` SET `gather`=gather+2 WHERE `account`=\'{account}\'', 
-    'skill_41':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\''
-    }
-
-assistant = {
-    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_2':'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+2,`enhance_de2`=enhance_de2+2 WHERE `account`=\'{target}\'', 
-    'skill_3':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0,`status_lock`=2 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_31':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_4':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_41':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_sk2+5 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\''
-    }
 #-----------------------------------------------------------------------------------------------------
 #threading
 def batch_data(team_id):
