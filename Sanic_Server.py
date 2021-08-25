@@ -201,12 +201,6 @@ def compute_user_action(team_id):
         else:
             print('still have long way')      
 #-----------------------------------------------------------------------------------------------------
-#threading
-def batch_data(team_id):
-    sql = 'SELECT * FROM `action_' + str(team_id) + '`'
-    result = db_search_all(sql)
-    
-#-----------------------------------------------------------------------------------------------------
 #just for test
 @app.get("/test")
 async def test(request):
@@ -625,6 +619,8 @@ async def get_action(request):
             else:
                 data += js.dumps(tar)
         data += ']}'
+        t_compute_action = threading.Thread(target=compute_user_action, args=(id, ))
+        t_compute_action.start()
         return text(data)
     except Exception as e:
         print(str(e))
@@ -633,7 +629,22 @@ async def get_action(request):
 @app.post("/new_turn")
 async def new_turn(requset):
     try:
-        
+        team_id = requset.json['id']
+        account = requset.json['account']
+        sql = 'SELECT `assist_lock`,`enhance_sk1`,`enhance_sk2`,`enhance_sk3`,`enhance_sk4`,`enhance_de1`,`enhance_de2`,`enhance_de3`,`gather`,`immortal`,`numb`,`sleep`,`posion`,`blood`,`drop_de1`,`drop_de2`,`drop_sk1`,`drop_sk2` \
+                FROM `status_{team_id}` WHERE `account`=\'{account}\''
+        result = db_search_one(sql.format(team_id=team_id,account=account))
+        tmp_key = list(result.keys())
+        tmp_update = ''
+        for i in range (0, len(tmp_key)):
+            if result[tmp_key[i]] == 0:
+                continue
+            else:
+                result[tmp_key[i]] -= 1
+                tmp_update += tmp_key[i] + '=' + str(result[tmp_key[i]]) + ','
+        update = tmp_update.rstrip(',')
+        sql = 'UPDATE `status_{team_id}` SET {update} WHERE `account`=\'{account}\''
+        db_modify(sql.format(update=update, team_id=team_id,account=account))
         return text("done")
     except Exception as e:
         print(str(e))
