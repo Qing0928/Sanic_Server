@@ -7,8 +7,15 @@ import time
 import json as js
 import threading
 
-db_conn = pymysql.Connect(host='127.0.0.1', user='pmauser', password='game0934', 
-                        db='game_sql', cursorclass=pymysql.cursors.DictCursor)
+try:
+    db_conn = pymysql.Connect(
+        host='127.0.0.1', 
+        user='pmauser', 
+        password='game0934', 
+        db='game_sql', 
+        cursorclass=pymysql.cursors.DictCursor)
+except Exception as e:
+    print(e)
 
 app = Sanic("ARGame_Server")
 lock = threading.Lock()#多執行緒鎖定
@@ -41,6 +48,35 @@ def db_modify(sql):
     db_conn.commit()
     return result
 #-----------------------------------------------------------------------------------------------------
+#prototype of status & action table 
+status_table = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
+                    `account` varchar(40) PRIMARY KEY NOT NULL, \
+                    `hp` int NOT NULL DEFAULT \'0\', \
+                    `enhance_sk1` int NOT NULL DEFAULT \'0\', \
+                    `enhance_sk2` int NOT NULL DEFAULT \'0\', \
+                    `enhance_sk3` int NOT NULL DEFAULT \'0\', \
+                    `enhance_sk4` int NOT NULL DEFAULT \'0\', \
+                    `enhance_de1` int NOT NULL DEFAULT \'0\', \
+                    `enhance_de2` int NOT NULL DEFAULT \'0\', \
+                    `enhance_de3` int NOT NULL DEFAULT \'0\', \
+                    `gather` int NOT NULL DEFAULT \'0\', \
+                    `immortal` int NOT NULL DEFAULT \'0\', \
+                    `numb` int NOT NULL DEFAULT \'0\', \
+                    `sleep` int NOT NULL DEFAULT \'0\', \
+                    `poison` int NOT NULL DEFAULT \'0\', \
+                    `blood` int NOT NULL DEFAULT \'0\', \
+                    `drop_de1` int NOT NULL DEFAULT \'0\', \
+                    `drop_de2` int NOT NULL DEFAULT \'0\', \
+                    `drop_sk1` int NOT NULL DEFAULT \'0\', \
+                    `drop_sk2` int NOT NULL DEFAULT \'0\', \
+                    `assist_lock` int NOT NULL DEFAULT \'0\' \
+                )'
+action_table = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
+                        `account` varchar(40) PRIMARY KEY NOT NULL, \
+                        `action` varchar(40) NOT NULL DEFAULT \'\', \
+                        `target` varchar(40) NOT NULL DEFAULT \'\', \
+                        `fate` int NOT NULL DEFAULT \'0\')'
+#-----------------------------------------------------------------------------------------------------
 #skill_list
 #對自己以外的目標施放技能=>`account`=target
 #對自己施放技能=>`account`=account
@@ -52,7 +88,7 @@ fighter = {
     'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp*0.8 WHERE `account`=\'{target}\'', 
     'skill_41':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`=\'{account}\''
     }
-            
+         
 traveler = {
     'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
     'skill_2':'UPDATE `status_{team_id}` SET `enhance_sk1`=enhance_sk1+1 WHERE `account`=\'{target}\'', 
@@ -287,8 +323,9 @@ async def get_new_item(request):
         num = int(result[item]) + 1
         sql = 'UPDATE `user_item` SET ' + str(item) + '=' + str(num) + ' WHERE account=\'' + str(account) + '\''
         db_modify(sql)
-        str_re = '{\"item\":' + '\"' + item + '\"' + '}'
-        return json(str_re)
+        #str_re = '{"item":' + '"' + item + '"' + '}'
+        #return json(str_re)
+        return text("done")
     except Exception as e:
         print(str(e))
         return text("Explode")
@@ -383,7 +420,7 @@ async def sign_in(request):
         print('Error Message:' + str(e))
         return text("Explode")
 
-@app.post("select_career")
+@app.post("/select_career")
 async def select_career(request):
     try:
         account = request.json['account']
@@ -395,7 +432,7 @@ async def select_career(request):
         print(str(e))
         return text("Explode")
 
-@app.post("get_career")
+@app.post("/get_career")
 async def get_career(request):
     try:
         account = request.json['account']
@@ -544,49 +581,33 @@ async def duel_start(request):
         sql = 'UPDATE `user_info` SET `play_status`=1 WHERE team_id={id}'
         db_modify(sql.format(id=id))
         #create table to store status data
-        sql = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
-                    `account` varchar(40) PRIMARY KEY NOT NULL, \
-                    `hp` int NOT NULL DEFAULT \'0\', \
-                    `turn_stat` int NOT NULL DEFAULT \'0\', \
-                    `enhance_sk1` int NOT NULL DEFAULT \'0\', \
-                    `enhance_sk2` int NOT NULL DEFAULT \'0\', \
-                    `enhance_sk3` int NOT NULL DEFAULT \'0\', \
-                    `enhance_sk4` int NOT NULL DEFAULT \'0\', \
-                    `enhance_de1` int NOT NULL DEFAULT \'0\', \
-                    `enhance_de2` int NOT NULL DEFAULT \'0\', \
-                    `enhance_de3` int NOT NULL DEFAULT \'0\', \
-                    `gather` int NOT NULL DEFAULT \'0\', \
-                    `immortal` int NOT NULL DEFAULT \'0\', \
-                    `numb` int NOT NULL DEFAULT \'0\', \
-                    `sleep` int NOT NULL DEFAULT \'0\', \
-                    `poison` int NOT NULL DEFAULT \'0\', \
-                    `blood` int NOT NULL DEFAULT \'0\', \
-                    `drop_de1` int NOT NULL DEFAULT \'0\', \
-                    `drop_de2` int NOT NULL DEFAULT \'0\', \
-                    `drop_sk1` int NOT NULL DEFAULT \'0\', \
-                    `drop_sk2` int NOT NULL DEFAULT \'0\', \
-                    `assist_lock` int NOT NULL DEFAULT \'0\' \
-                )'
-        db_modify(sql.format(id=id))
+        db_modify(status_table.format(id=id))
+        #insert player
+        #找出所有隊員
         sql = 'SELECT * FROM `teams` WHERE leader=\'{account}\''
         result = db_search_one(sql.format(account=account))
-        for i in range (0, len(result)):
-            tar = list(result.keys())
-            sql = 'INSERT INTO `status_{id}` (account) VALUES (\'' + str(result[tar[i]]) + '\')'
-            db_modify(sql.format(id=id))
+        #找出隊員的職業
+        sql = 'SELECT `account`,`career` FROM `user_skill` WHERE `account`=\'{m0}\'or`account`=\'{m1}\'or`account`=\'{m2}\'or`account`=\'{m3}\''
+        career_result = db_search_all(sql.format(m0=result['leader'],m1=result['member1'],m2=result['member2'],m3=result['member3']))
+        for i in range (0, len(career_result)):
+            if (career_result[i]['career'] == 'fighter'):
+                sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
+                db_modify(sql.format(team_id=id,account=career_result[i]['account'],hp=1000))
+            elif (career_result[i]['career'] == 'traveler'):
+                sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
+                db_modify(sql.format(team_id=id,account=career_result[i]['account'],hp=850))
+            elif (career_result[i]['career'] == 'magician'):
+                sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
+                db_modify(sql.format(team_id=id,account=career_result[i]['account'],hp=700))
+            elif (career_result[i]['career'] == 'assistant'):
+                sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
+                db_modify(sql.format(team_id=id,account=career_result[i]['account'],hp=700))
         sql = 'INSERT INTO `status_{id}` (account) VALUES (\'boss\')'
         db_modify(sql.format(id=id))
-        sql = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
-                        `account` varchar(40) PRIMARY KEY NOT NULL, \
-                        `action` varchar(40) NOT NULL DEFAULT \'\', \
-                        `target` varchar(40) NOT NULL DEFAULT \'\', \
-                        `fate` int NOT NULL DEFALT \'0\' \
-                    )'
-        db_modify(sql.format(id=id))
-        for i in range (0, len(result)):
-            tar = list(result.keys())
-            sql = 'INSERT INTO `action_{id}` (account) VALUES (\'' + str(result[tar[i]]) + '\')'
-            db_modify(sql.format(id=id))
+        db_modify(action_table.format(id=id))
+        for i in range (0, len(career_result)):
+            sql = 'INSERT INTO `action_{id}` (account) VALUES (\'{account}\')'
+            db_modify(sql.format(id=id, account=career_result[i]['account']))
         sql = 'INSERT INTO `action_{id}` (account) VALUES (\'boss\')'
         db_modify(sql.format(id=id))
         '''end = time.time()
@@ -633,8 +654,8 @@ async def get_last_status(request):
     try:
         account = request.json['account']
         id = request.json['id']
-        sql = 'SELECT * FROM `status_' + str(id) + '`' + ' WHERE account=' + '\'' + account + '\''
-        result = db_search_one(sql)
+        sql = 'SELECT * FROM `status_{id}` WHERE `account`=\'{account}\''
+        result = db_search_one(sql.format(id=id, account=account))
         return json(result)
     except Exception as e:
         print(str(e))
