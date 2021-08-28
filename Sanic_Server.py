@@ -23,30 +23,42 @@ lock = threading.Lock()#多執行緒鎖定
 #db function
 def db_search_all(sql):
     result = ''
-    with db_conn.cursor() as cur:
-        lock.acquire()
-        cur.execute(sql)
+    try:
+        with db_conn.cursor() as cur:
+            lock.acquire()
+            cur.execute(sql)
+            lock.release()
+            result = cur.fetchall()
+        return result
+    except Exception as e:
         lock.release()
-        result = cur.fetchall()
-    return result
+        return e
 
 def db_search_one(sql):
     result = ''
-    with db_conn.cursor() as cur:
-        lock.acquire()
-        cur.execute(sql)
+    try:
+        with db_conn.cursor() as cur:
+            lock.acquire()
+            cur.execute(sql)
+            lock.release()
+            result = cur.fetchone()
+        return result
+    except Exception as e:
         lock.release()
-        result = cur.fetchone()
-    return result
+        return e
 
 def db_modify(sql):
     result = ''
-    with db_conn.cursor() as cur:
-        lock.acquire()
-        cur.execute(sql)
+    try:
+        with db_conn.cursor() as cur:
+            lock.acquire()
+            cur.execute(sql)
+            lock.release()
+        db_conn.commit()
+        return result
+    except Exception as e:
         lock.release()
-    db_conn.commit()
-    return result
+        return e
 #-----------------------------------------------------------------------------------------------------
 #prototype of status & action table 
 status_table = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
