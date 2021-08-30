@@ -81,7 +81,8 @@ status_table = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
                     `drop_de2` int NOT NULL DEFAULT \'0\', \
                     `drop_sk1` int NOT NULL DEFAULT \'0\', \
                     `drop_sk2` int NOT NULL DEFAULT \'0\', \
-                    `assist_lock` int NOT NULL DEFAULT \'0\' \
+                    `assist_lock` int NOT NULL DEFAULT \'0\', \
+                    `b_type` varchar(40) NOT NULL DEFAULT \'\' \
                 )'
 action_table = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
                         `account` varchar(40) PRIMARY KEY NOT NULL, \
@@ -448,8 +449,8 @@ async def select_career(request):
 async def get_career(request):
     try:
         account = request.json['account']
-        sql = 'SELECT `career` FROM `user_skill` WHERE account=' + '\'' + account + '\''
-        result = db_search_one(sql)
+        sql = 'SELECT `career` FROM `user_skill` WHERE `account`=\'{account}\''
+        result = db_search_one(sql.format(account=account))
         return json(result)
     except Exception as e:
         print(e)
@@ -586,18 +587,23 @@ async def duel_start(request):
         #start = time.time()
         #account of leader
         account = request.json['account']
+        b_type = request.json['b_type']
+
         #change user play_status 
         sql = 'SELECT `team_id` FROM `user_info` WHERE account=\'{account}\''
         result = db_search_one(sql.format(account=account))
         id = result['team_id']
         sql = 'UPDATE `user_info` SET `play_status`=1 WHERE team_id={id}'
         db_modify(sql.format(id=id))
+
         #create table to store status data
         db_modify(status_table.format(id=id))
+
         #insert player
         #找出所有隊員
         sql = 'SELECT * FROM `teams` WHERE leader=\'{account}\''
         result = db_search_one(sql.format(account=account))
+
         #找出隊員的職業
         sql = 'SELECT `account`,`career` FROM `user_skill` WHERE `account`=\'{m0}\'or`account`=\'{m1}\'or`account`=\'{m2}\'or`account`=\'{m3}\''
         career_result = db_search_all(sql.format(m0=result['leader'],m1=result['member1'],m2=result['member2'],m3=result['member3']))
@@ -614,14 +620,17 @@ async def duel_start(request):
             elif (career_result[i]['career'] == 'assistant'):
                 sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
                 db_modify(sql.format(team_id=id,account=career_result[i]['account'],hp=700))
-        sql = 'INSERT INTO `status_{id}` (account) VALUES (\'boss\')'
-        db_modify(sql.format(id=id))
+        sql = 'INSERT INTO `status_{id}` (account,b_ytpe) VALUES (\'boss\',\'{b_type}\')'
+        db_modify(sql.format(id=id,b_type=b_type))
+
+        #create table to store action 
         db_modify(action_table.format(id=id))
         for i in range (0, len(career_result)):
             sql = 'INSERT INTO `action_{id}` (account) VALUES (\'{account}\')'
             db_modify(sql.format(id=id, account=career_result[i]['account']))
         sql = 'INSERT INTO `action_{id}` (account) VALUES (\'boss\')'
         db_modify(sql.format(id=id))
+
         '''end = time.time()
         cost = end - start
         print('time cost:' + str(round(cost*1000, 3)) + 'ms')'''
@@ -763,10 +772,10 @@ async def finish_game(request):
                 '\'' + now + '\'' + \
                 ')'
         db_modify(sql)
-        sql = 'DROP TABLE IF EXISTS `action_' + str(id) + '`'
-        db_modify(sql)
-        sql = 'DROP TABLE IF EXISTS `status_' + str(id) + '`'
-        db_modify(sql)
+        sql = 'DROP TABLE IF EXISTS `action_{id}`'
+        db_modify(sql.format(id=id))
+        sql = 'DROP TABLE IF EXISTS `status_{id}`'
+        db_modify(sql.format(id=id))
         return text("done")
     except Exception as e:
         print(str(e))
