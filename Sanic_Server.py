@@ -52,7 +52,7 @@ def db_modify(sql):
     try:
         with db_conn.cursor() as cur:
             lock.acquire()
-            cur.execute(sql)
+            result = cur.execute(sql)
             lock.release()
         db_conn.commit()
         return result
@@ -588,7 +588,6 @@ async def duel_start(request):
         #account of leader
         account = request.json['account']
         b_type = request.json['b_type']
-
         #change user play_status 
         sql = 'SELECT `team_id` FROM `user_info` WHERE account=\'{account}\''
         result = db_search_one(sql.format(account=account))
@@ -620,9 +619,24 @@ async def duel_start(request):
             elif (career_result[i]['career'] == 'assistant'):
                 sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
                 db_modify(sql.format(team_id=id,account=career_result[i]['account'],hp=700))
-        sql = 'INSERT INTO `status_{id}` (account,b_ytpe) VALUES (\'boss\',\'{b_type}\')'
-        db_modify(sql.format(id=id,b_type=b_type))
-
+        
+        if b_type == 'engineer':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            chk_modify = db_modify(sql.format(id=id,hp=1000,b_type=b_type))
+            print('是否成功:' + str(chk_modify))
+        if b_type == 'business':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=1000,b_type=b_type))
+        if b_type == 'humanities':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=1200,b_type=b_type))
+        if b_type == 'design':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=2000,b_type=b_type))
+        if b_type == 'future':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=2000,b_type=b_type))
+        
         #create table to store action 
         db_modify(action_table.format(id=id))
         for i in range (0, len(career_result)):
