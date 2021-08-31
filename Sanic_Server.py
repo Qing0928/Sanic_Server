@@ -877,6 +877,7 @@ async def new_turn(requset):
         sql = 'UPDATE `status_{team_id}` SET {update} WHERE `account`=\'{account}\''
         db_modify(sql.format(update=update, team_id=team_id,account=account))
         t_produce_boss = threading.Thread(target=produce_boss_action,args=(team_id, ))
+        t_produce_boss.start()
         return text("done")
     except Exception as e:
         print(str(e))
