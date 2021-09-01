@@ -426,6 +426,7 @@ def produce_boss_action(team_id):
         
     except Exception as e:
         print(e)
+#-----------------------------------------------------------------------------------------------------
 #just for test
 @app.get("/test")
 async def test(request):
@@ -712,12 +713,14 @@ async def duel_start(request):
         #account of leader
         account = request.json['account']
         b_type = request.json['b_type']
+
         #change user play_status 
         sql = 'SELECT `team_id` FROM `user_info` WHERE account=\'{account}\''
         result = db_search_one(sql.format(account=account))
         id = result['team_id']
+        
         sql = 'UPDATE `user_info` SET `play_status`=1 WHERE team_id={id}'
-        db_modify(sql.format(id=id))
+        result = db_modify(sql.format(id=id))
 
         #create table to store status data
         db_modify(status_table.format(id=id))
@@ -730,6 +733,7 @@ async def duel_start(request):
         #找出隊員的職業
         sql = 'SELECT `account`,`career` FROM `user_skill` WHERE `account`=\'{m0}\'or`account`=\'{m1}\'or`account`=\'{m2}\'or`account`=\'{m3}\''
         career_result = db_search_all(sql.format(m0=result['leader'],m1=result['member1'],m2=result['member2'],m3=result['member3']))
+        #初始化隊員狀態
         for i in range (0, len(career_result)):
             if (career_result[i]['career'] == 'fighter'):
                 sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
@@ -744,29 +748,44 @@ async def duel_start(request):
                 sql = 'INSERT INTO `status_{team_id}` (account,hp) VALUES (\'{account}\',\'{hp}\')'
                 db_modify(sql.format(team_id=id,account=career_result[i]['account'],hp=700))
         
-        if b_type == 'engineer':
-            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
-            db_modify(sql.format(id=id,hp=1000,b_type=b_type))
-        if b_type == 'business':
-            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
-            db_modify(sql.format(id=id,hp=1000,b_type=b_type))
-        if b_type == 'humanities':
-            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
-            db_modify(sql.format(id=id,hp=1200,b_type=b_type))
-        if b_type == 'design':
-            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
-            db_modify(sql.format(id=id,hp=2000,b_type=b_type))
-        if b_type == 'future':
-            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
-            db_modify(sql.format(id=id,hp=2000,b_type=b_type))
-        
         #create table to store action 
         db_modify(action_table.format(id=id))
+        #初始化隊員動作
         for i in range (0, len(career_result)):
             sql = 'INSERT INTO `action_{id}` (account) VALUES (\'{account}\')'
             db_modify(sql.format(id=id, account=career_result[i]['account']))
-        sql = 'INSERT INTO `action_{id}` (account) VALUES (\'boss\')'
-        db_modify(sql.format(id=id))
+
+        #初始化boss動作與狀態
+        if b_type == 'engineer':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=1000,b_type=b_type))
+            sql = 'INSERT INTO `action_{id}` (account,action) VALUES (\'boss\', \'auto_attack\')'
+            err = db_modify(sql.format(id=id))
+            print(err)
+
+        if b_type == 'business':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=1000,b_type=b_type))
+            sql = 'INSERT INTO `action_{id}` (account,action) VALUES (\'boss\', \'auto_attack\')'
+            db_modify(sql.format(id=id))
+
+        if b_type == 'humanities':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=1200,b_type=b_type))
+            sql = 'INSERT INTO `action_{id}` (account,action) VALUES (\'boss\', \'skill_1\')'
+            db_modify(sql.format(id=id))
+
+        if b_type == 'design':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=2000,b_type=b_type))
+            sql = 'INSERT INTO `action_{id}` (account,action) VALUES (\'boss\', \'skill_1\')'
+            db_modify(sql.format(id=id))
+
+        if b_type == 'future':
+            sql = 'INSERT INTO `status_{id}` (account,hp,b_type) VALUES (\'boss\',\'{hp}\',\'{b_type}\')'
+            db_modify(sql.format(id=id,hp=2000,b_type=b_type))
+            sql = 'INSERT INTO `action_{id}` (account,action) VALUES (\'boss\', \'skill_4\')'
+            db_modify(sql.format(id=id))
 
         '''end = time.time()
         cost = end - start
