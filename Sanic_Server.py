@@ -1027,8 +1027,12 @@ async def get_action(request):
         data += ']}'
 
         #啟動執行緒計算玩家的動作
-        t_compute_action = threading.Thread(target=compute_user_action, args=(id, ))
-        t_compute_action.start()
+        t_compute_user_action = threading.Thread(target=compute_user_action, args=(id, ))
+        t_compute_user_action.start()
+        
+        #啟動執行緒計算boss的動作
+        t_compute_boss_action = threading.Thread(target=compute_boss_action, args=(id, ))
+        t_compute_boss_action.start()
 
         return text(data)
     except Exception as e:
