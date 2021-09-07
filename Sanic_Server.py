@@ -143,6 +143,7 @@ status_table = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
                     `assist_lock` int NOT NULL DEFAULT \'0\', \
                     `b_type` varchar(40) NOT NULL DEFAULT \'\' \
                 )'
+
 action_table = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
                         `account` varchar(40) PRIMARY KEY NOT NULL, \
                         `action` varchar(40) NOT NULL DEFAULT \'\', \
@@ -373,8 +374,6 @@ def compute_user_action(team_id):
                     print('still have long way')
         
         #重製`action_{team_id}`的資料
-        sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target=`\'\',fate=\'0\' WHERE `account`!=\'boss\''
-        fight_modify(sql.format(team_id=team_id))
 
     except Exception as e:
         print(e)
@@ -577,6 +576,343 @@ def compute_boss_action(team_id):
                 sql = engineer['skill_4'].format(team_id=team_id, num=455*num)
                 fight_modify(sql)
         
+    except Exception as e:
+        print(e)
+#-----------------------------------------------------------------------------------------------------
+#compute_action
+def compute_action(team_id):
+    try:
+        #取得玩家動作
+        sql = 'SELECT * FROM `action_{team_id}` WHERE `account`!=\'boss\''
+        result = fight_fetchall(sql.format(team_id=team_id))
+
+        #先檢查有沒有動作沒進來
+        chk = 0
+        for i in range(0, len(result)):
+            if result[i]['action'] == '':
+                chk += 1
+            if chk > 0:
+                break
+
+        #補師持續恢復技能檢查，動作都進來時優先發動
+        if chk == 0:
+            sql = 'SELECT `assist_lock`,`account` FROM `status_{team_id}` WHERE `account`!=\'boss\''
+            assist_lock = fight_fetchall(sql.format(team_id=team_id))
+            for i in range(0, len(assist_lock)):
+                if assist_lock[i]['assist_lock'] <= 0:
+                    continue
+                if assist_lock[i]['assist_lock'] > 0:
+                    sql = 'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{account}\''
+                    fight_modify(sql.format(team_id=team_id, num=200, account=assist_lock[i]['account']))
+        else:
+            pass
+
+        #逐個計算
+        for i in range (0, len(result)):
+            tmp = result[i]
+            #沒進來就跳掉
+            if (chk != 0):
+                print('還不用處理')
+                break
+
+            #開始處理動作
+            else:
+                #計算技能倍率
+                sql = 'SELECT `drop_sk1`,`drop_sk2`, `enhance_sk1`, `enhance_sk2`, `enhance_sk3`, `enhance_sk4` FROM `status_{team_id}` WHERE account=\'{account}\''
+                enhance_status = fight_fatchone(sql.format(team_id=team_id, account=tmp['account']))
+                skill_times = 1
+                if enhance_status['drop_sk1'] > 0:
+                    skill_times *= 0.85
+                elif enhance_status['drop_sk2'] > 0:
+                    skill_times *= 0.7
+                elif enhance_status['enhance_sk1'] > 0:
+                    skill_times *= 1.15
+                elif enhance_status['enhance_sk2'] > 0:
+                    skill_times *= 1.2
+                elif enhance_status['enhance_sk3'] > 0:
+                    skill_times *= 1.5
+                elif enhance_status['enhance_sk4'] > 0:
+                    skill_times *= 2.5
+                else:
+                    skill_times *= 1
+
+                #是否可以行動
+                if (tmp['action'] == 'numb') or (tmp['action'] == 'gather') or (tmp['action'] == 'sleep'):
+                    print(str(tmp['account']) + ':' + '無法行動 why:' + str(tmp['action']))
+                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                    continue
+                
+                if (tmp['action'] == 'dead'):
+                    print(str(tmp['account']) + ':' + str(tmp['action']))
+                    continue
+
+                #可以行動
+                else:
+                    #技能發動
+                    if (tmp['action'] != 'item_1') and (tmp['action'] != 'item_2') and (tmp['action'] != 'item_3') and (tmp['action'] != 'item_4') and (tmp['action'] != 'item_5'):
+                        #取得職業類型
+                        sql = 'SELECT `career` FROM `user_skill` WHERE account=\'{account}\''
+                        career_result = db_fetchone(sql.format(account=tmp['account']))
+
+                        #fate = 0 機率效果不會發動，fate = 1 機率效果發動
+                        #fighter
+                        if career_result['career'] == 'fighter':  
+                            if tmp['action'] == 'skill_1':
+                                if tmp['fate'] == 0:
+                                    sql = fighter['skill_1'].format(team_id=team_id, target=tmp['target'], num=50*skill_times)
+                                    fight_modify(sql)
+                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_2':
+                                if tmp['fate'] == 0:
+                                    sql = fighter['skill_2'].format(team_id=team_id, target=tmp['account'])
+                                    fight_modify(sql)
+                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_3':
+                                if tmp['fate'] == 0:
+                                    sql = fighter['skill_3'].format(team_id=team_id, num=100*skill_times, target=tmp['target'])
+                                    fight_modify(sql)
+                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                                elif tmp['fate'] == 1:
+                                    sql = fighter['skill_3'].format(team_id=team_id, num=100*skill_times, target=tmp['target'])
+                                    fight_modify(sql)
+                                    sql = fighter['skill_31'].format(team_id=team_id, target=tmp['target'])
+                                    fight_modify(sql)
+                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                            
+                            if tmp['action'] == 'skill_4':
+                                if tmp['fate'] == 0:
+                                    sql = fighter['skill_4'].format(team_id=team_id, target=tmp['target'])
+                                    fight_modify(sql)
+                                    sql = fighter['skill_41'].format(team_id=team_id, target=tmp['target'])
+                                    fight_modify(sql)
+                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                        #traveler
+                        elif career_result['career'] == 'traveler':
+                            if tmp['action'] == 'skill_1':
+                                sql = traveler[tmp['action']].format(team_id=team_id, target=tmp['target'], num=60*skill_times)
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            elif tmp['action'] == 'skill_2':
+                                sql = traveler[tmp['action']].format(team_id=team_id, target=tmp['target'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            elif tmp['action'] == 'skill_3':
+                                sql = traveler[tmp['action']].format(team_id=team_id, account=tmp['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                                
+                            elif tmp['action'] == 'skill_31':
+                                sql = traveler[tmp['action']].format(team_id=team_id, target=tmp['target'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            elif tmp['action'] == 'skill_4':
+                                sql = traveler[tmp['action']].format(team_id=team_id, target=tmp['target'], num=200*skill_times)
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                        #magician
+                        elif career_result['career'] == 'magician':
+                            if tmp['action'] == 'skill_1':
+                                sql = magician[tmp['action']].format(team_id=team_id, target=tmp['target'], num=60*skill_times)
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_2':
+                                sql = magician[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_3':
+                                sql = magician[tmp['action']].format(team_id=team_id, target=tmp['target'], num=100*skill_times)
+                                fight_modify(sql)
+                                sql = magician['skill_31'].format(team_id=team_id, account=tmp['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_4':
+                                sql = magician[tmp['action']].format(team_id=team_id, account=tmp['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                                
+                            if tmp['action'] == 'skill_41':
+                                sql = magician[tmp['action']].format(team_id=team_id, target=tmp['target'], num=500*skill_times)
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                        #assistant
+                        elif career_result['career'] == 'assistant':
+                            if tmp['action'] == 'skill_1':
+                                sql = assistant[tmp['action']].format(team_id=team_id, num=150, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_2':
+                                sql = assistant[tmp['action']].format(team_id=team_id, target=tmp['target'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_3':
+                                sql = assistant[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                fight_modify(sql)
+                                sql = assistant['skill_31'].format(team_id=team_id, num=200*skill_times, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                            if tmp['action'] == 'skill_4':
+                                sql = assistant[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                fight_modify(sql)
+                                sql = assistant[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                        
+                    elif tmp['action'] == 'item_1':
+                        sql = 'UPDATE `status_{team_id}` SET `hp`=hp+100 WHERE `account`=\'{target}\''
+                        fight_modify(sql.format(team_id=team_id, account=tmp['target']))
+
+                    elif tmp['action'] == 'item_2':
+                        sql = 'UPDATE `status_{team_id}` SET `numb`=0,`poison`=0,`blood`=0 WHERE `account`=\'{target}\''
+                        fight_modify(sql.format(team_id=team_id, account=tmp['target']))
+
+                    elif tmp['action'] == 'item_3':
+                        sql = 'UPDATE `status_{team_id}` SET `hp`=hp+150 WHERE `account`=\'{target}\''
+                        fight_modify(sql.format(team_id=team_id, account=tmp['target']))
+
+                    elif tmp['action'] == 'item_4':
+                        sql = 'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+3 WHERE `account`=\'{target}\''
+                        fight_modify(sql.format(team_id=team_id, account=tmp['target']))
+
+                    elif tmp['action'] == 'item_5':#不會折斷的信念
+                        #取得目標的職業
+                        sql = 'SELECT `career` FROM `user_skill` WHERE account=\'{target}\''
+                        career_result = db_fetchone(sql.format(account=tmp['target']))
+
+                        if career_result['career'] == 'fighter':
+                            sql = 'UPDATE `status_{team_id}` SET `hp`=1000 WHERE `account`=\'{target}\''
+                            fight_modify(sql.format(team_id=team_id, target=tmp['target']))
+
+                        elif career_result['career'] == 'traveler':
+                            sql = 'UPDATE `status_{team_id}` SET `hp`=850 WHERE `account`=\'{target}\''
+                            fight_modify(sql.format(team_id=team_id, target=tmp['target']))
+
+                        elif career_result['career'] == 'magician':
+                            sql = 'UPDATE `status_{team_id}` SET `hp`=700 WHERE `account`=\'{target}\''
+                            fight_modify(sql.format(team_id=team_id, target=tmp['target']))
+
+                        elif career_result['career'] == 'assistant':
+                            sql = 'UPDATE `status_{team_id}` SET `hp`=700 WHERE `account`=\'{target}\''
+                            fight_modify(sql.format(team_id=team_id, target=tmp['target']))
+
+                    else:
+                        print('still have long way')
+
+            #扣血型減益
+            sql = 'SELECT `poison`,`blood` FROM `status_{team_id}` WHERE `account`=\'{account}\''
+            hp_debuff = fight_fatchone(sql.format(team_id=team_id, account=tmp['account']))
+
+            if hp_debuff['poison'] != 0:
+                sql = 'UPDATE `status_{team_id}` SET `hp`=hp-60  WHERE `account`=\'{account}\''
+                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+            
+            if hp_debuff['blood'] != 0:
+                sql = 'UPDATE `status_{team_id}` SET `hp`=hp-105 WHERE `account`=\'{account}\''
+                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+        #--------------------------------------------------------------------------------------------------------------------
+        #計算倍率boss
+        sql = 'SELECT `drop_sk1`,`drop_sk2`, `enhance_sk1`, `enhance_sk2`, `enhance_sk3`, `enhance_sk4` FROM `status_{team_id}` WHERE `account`=\'boss\''
+        damage_status = fight_fatchone(sql.format(team_id=team_id))
+        skill_times = 1
+        if damage_status['drop_sk1'] > 0:
+            skill_times *= 0.85
+        elif damage_status['drop_sk2'] > 0:
+            skill_times *= 0.7
+        elif damage_status['enhance_sk1'] > 0:
+            skill_times *= 1.15
+        elif damage_status['enhance_sk2'] > 0:
+            skill_times *= 1.2
+        elif damage_status['enhance_sk3'] > 0:
+            skill_times *= 1.5
+        elif damage_status['enhance_sk4'] > 0:
+            skill_times *= 2.5
+        else:
+            skill_times *= 1
+        
+        #取得boss的類別和動作
+        sql = 'SELECT `b_type` FROM `status_{team_id}` WHERE `account`=\'boss\''
+        b_type = fight_fatchone(sql.format(team_id=team_id))
+        sql = 'SELECT `action` FROM `action_{team_id}` WHERE `account`=\'boss\''
+        result = fight_fatchone(sql.format(team_id=team_id))
+
+        #依照類別處理技能效果
+        if b_type['b_type'] == 'engineer':
+            if result['action'] == 'auto_attack':
+                sql = engineer['auto_attack'].format(team_id=team_id, num=100*skill_times)
+                fight_modify(sql)
+            
+            if result['action'] == 'skill_1':
+                sql = engineer['skill_1'].format(team_id=team_id, num=120*skill_times)
+                fight_modify(sql)
+
+            if result['action'] == 'skill_2':
+                sql = engineer['skill_2'].format(team_id=team_id, num=105*skill_times)
+                fight_modify(sql)
+
+                #中毒效果是否發動
+                debuff_list = ['enable', 'disable']
+                debuff = choices(debuff_list, weights=[2, 8])
+                print(debuff[0])
+                #發動
+                if debuff[0] == 'enable':
+                    sql = engineer['skill_21'].format(team_id=team_id)
+                    fight_modify(sql)
+                else:
+                    pass
+
+            if result['action'] == 'skill_3':
+                sql = engineer['skil_3'].format(team_id=team_id, num=175*skill_times)
+                fight_modify(sql)
+                
+                #睡眠效果是否發動
+                debuff_list = ['enable', 'disable']
+                debuff = choices(debuff_list, weights=[4, 6])
+                print(debuff[0])
+                #發動
+                if debuff[0] == 'enable':
+                    sql = engineer['skill_31'].format(team_id=team_id)
+                    fight_modify(sql)
+                else:
+                    pass
+
+            if result['action'] == 'skill_4':
+                sql = engineer['skill_4'].format(team_id=team_id, num=455*skill_times)
+                fight_modify(sql)
+
     except Exception as e:
         print(e)
 #-----------------------------------------------------------------------------------------------------
@@ -1027,8 +1363,8 @@ async def get_action(request):
         data += ']}'
 
         #啟動執行緒計算玩家的動作
-        t_compute_user_action = threading.Thread(target=compute_user_action, args=(id, ))
-        t_compute_user_action.start()
+        t_compute_action = threading.Thread(target=compute_action, args=(id, ))
+        t_compute_action.start()
         
         #啟動執行緒計算boss的動作
         t_compute_boss_action = threading.Thread(target=compute_boss_action, args=(id, ))
