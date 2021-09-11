@@ -150,7 +150,7 @@ action_table = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
                         `target` varchar(40) NOT NULL DEFAULT \'\', \
                         `fate` int NOT NULL DEFAULT \'0\')'
 #-----------------------------------------------------------------------------------------------------
-#skill_list_user
+#user_skill_list
 #對自己以外的目標施放技能=>`account`=target
 #對自己施放技能=>`account`=account
 fighter = {
@@ -185,7 +185,7 @@ assistant = {
     'skill_3':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0,`status_lock`=2 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
     'skill_31':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
     'skill_4':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_41':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_sk2+5 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\''
+    'skill_41':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_de2+5 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\''
     }
 #-----------------------------------------------------------------------------------------------------
 #boss_skill_list
@@ -641,11 +641,11 @@ def compute_action(team_id):
                     print(str(tmp['account']) + ':' + '無法行動 why:' + str(tmp['action']))
                     sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
                     fight_modify(sql.format(team_id=team_id, account=tmp['account']))
-                    continue
+                    
                 
                 if (tmp['action'] == 'dead'):
                     print(str(tmp['account']) + ':' + str(tmp['action']))
-                    continue
+                    
 
                 #可以行動
                 else:
@@ -1366,10 +1366,10 @@ async def get_action(request):
         t_compute_action = threading.Thread(target=compute_action, args=(id, ))
         t_compute_action.start()
         
-        #啟動執行緒計算boss的動作
+        '''#啟動執行緒計算boss的動作
         t_compute_boss_action = threading.Thread(target=compute_boss_action, args=(id, ))
-        t_compute_boss_action.start()
-
+        t_compute_boss_action.start()'''
+        
         return text(data)
     except Exception as e:
         print(str(e))
@@ -1379,23 +1379,24 @@ async def get_action(request):
 async def new_turn(requset):
     try:
         team_id = requset.json['id']
-        account = requset.json['account']
 
         #所有效果的回合數-1
-        sql = 'SELECT `assist_lock`,`enhance_sk1`,`enhance_sk2`,`enhance_sk3`,`enhance_sk4`,`enhance_de1`,`enhance_de2`,`enhance_de3`,`gather`,`immortal`,`numb`,`sleep`,`poison`,`blood`,`drop_de1`,`drop_de2`,`drop_sk1`,`drop_sk2` \
-                FROM `status_{team_id}` WHERE `account`=\'{account}\''
-        result = fight_fatchone(sql.format(team_id=team_id,account=account))
-        tmp_key = list(result.keys())
-        tmp_update = ''
-        for i in range (0, len(tmp_key)):
-            if result[tmp_key[i]] == 0:
-                continue
-            else:
-                result[tmp_key[i]] -= 1
-                tmp_update += tmp_key[i] + '=' + str(result[tmp_key[i]]) + ','
-        update = tmp_update.rstrip(',')
-        sql = 'UPDATE `status_{team_id}` SET {update} WHERE `account`=\'{account}\''
-        fight_modify(sql.format(update=update, team_id=team_id,account=account))
+        sql = 'SELECT `account`,`assist_lock`,`enhance_sk1`,`enhance_sk2`,`enhance_sk3`,`enhance_sk4`,`enhance_de1`,`enhance_de2`,`enhance_de3`,`gather`,`immortal`,`numb`,`sleep`,`poison`,`blood`,`drop_de1`,`drop_de2`,`drop_sk1`,`drop_sk2` \
+                FROM `status_{team_id}`'
+        result = fight_fetchall(sql.format(team_id=team_id))
+        for j in range(0, len(result)):
+            tmp_update = ''
+            tmp_result = result[j]
+            tmp_key = list(tmp_result[j].keys())
+            for i in range (0, len(tmp_key)):
+                if tmp_result[tmp_key[i]] == 0:
+                    continue
+                else:
+                    tmp_result[tmp_key[i]] -= 1
+                    tmp_update += tmp_key[i] + '=' + str(tmp_result[tmp_key[i]]) + ','
+            update = tmp_update.rstrip(',')
+            sql = 'UPDATE `status_{team_id}` SET {update} WHERE `account`=\'{account}\''
+            fight_modify(sql.format(update=update, team_id=team_id,account=tmp_result['account']))
 
         #啟動其他執行緒來產生boss的動作
         t_produce_boss = threading.Thread(target=produce_boss_action,args=(team_id, ))
