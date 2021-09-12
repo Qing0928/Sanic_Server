@@ -147,8 +147,8 @@ status_table = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
 action_table = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
                         `account` varchar(40) PRIMARY KEY NOT NULL, \
                         `action` varchar(40) NOT NULL DEFAULT \'\', \
-                        `target` varchar(40) NOT NULL DEFAULT \'\', \
-                        `fate` int NOT NULL DEFAULT \'0\')'
+                        `target` varchar(40) NOT NULL DEFAULT \'\' \
+                        )'
 #-----------------------------------------------------------------------------------------------------
 #user_skill_list
 #對自己以外的目標施放技能=>`account`=target
@@ -659,42 +659,41 @@ def compute_action(team_id):
                         #fighter
                         if career_result['career'] == 'fighter':  
                             if tmp['action'] == 'skill_1':
-                                if tmp['fate'] == 0:
-                                    sql = fighter['skill_1'].format(team_id=team_id, target=tmp['target'], num=50*skill_times)
-                                    fight_modify(sql)
-                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
-                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                                sql = fighter['skill_1'].format(team_id=team_id, target=tmp['target'], num=50*skill_times)
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
 
                             if tmp['action'] == 'skill_2':
-                                if tmp['fate'] == 0:
-                                    sql = fighter['skill_2'].format(team_id=team_id, target=tmp['account'])
-                                    fight_modify(sql)
-                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
-                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                                sql = fighter['skill_2'].format(team_id=team_id, target=tmp['account'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
 
                             if tmp['action'] == 'skill_3':
-                                if tmp['fate'] == 0:
-                                    sql = fighter['skill_3'].format(team_id=team_id, num=100*skill_times, target=tmp['target'])
-                                    fight_modify(sql)
-                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
-                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
-
-                                elif tmp['fate'] == 1:
+                                debuff_list = ['enable', 'disable']
+                                debuff = choices(debuff_list, weights=[1, 9])
+                                if debuff[0] == 'enable':
                                     sql = fighter['skill_3'].format(team_id=team_id, num=100*skill_times, target=tmp['target'])
                                     fight_modify(sql)
                                     sql = fighter['skill_31'].format(team_id=team_id, target=tmp['target'])
                                     fight_modify(sql)
-                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+
+                                if debuff[0] == 'disable':
+                                    sql = fighter['skill_3'].format(team_id=team_id, num=100*skill_times, target=tmp['target'])
+                                    fight_modify(sql)
+                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
                                     fight_modify(sql.format(team_id=team_id, account=tmp['account']))
                             
                             if tmp['action'] == 'skill_4':
-                                if tmp['fate'] == 0:
-                                    sql = fighter['skill_4'].format(team_id=team_id, target=tmp['target'])
-                                    fight_modify(sql)
-                                    sql = fighter['skill_41'].format(team_id=team_id, target=tmp['target'])
-                                    fight_modify(sql)
-                                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
-                                    fight_modify(sql.format(team_id=team_id, account=tmp['account']))
+                                sql = fighter['skill_4'].format(team_id=team_id, target=tmp['target'])
+                                fight_modify(sql)
+                                sql = fighter['skill_41'].format(team_id=team_id, target=tmp['target'])
+                                fight_modify(sql)
+                                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
+                                fight_modify(sql.format(team_id=team_id, account=tmp['account']))
 
                         #traveler
                         elif career_result['career'] == 'traveler':
