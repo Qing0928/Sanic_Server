@@ -1373,7 +1373,7 @@ async def get_last_status(request):
         account = request.json['account']
         id = request.json['id']
         sql = 'SELECT * FROM `status_{id}` WHERE `account`=\'{account}\''
-        result = db_fetchone(sql.format(id=id, account=account))
+        result = fight_fatchone(sql.format(id=id, account=account))
         return json(result)
     except Exception as e:
         print(str(e))
