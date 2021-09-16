@@ -215,9 +215,9 @@ business = {
     'skill_11':'UPDATE `status_{team_id}` SET `gather`=\'0\' WHERE `account`=\'{target}\'', 
     'skill_2':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`!=\'boss\'', 
     'skill_21':'UPDATE `status_{team_id}` SET `drop_sk1`=drop_sk1+3 WHERE `account`!=\'boss\'', 
-    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`drop_sk2`=drop_sk2+2 WHERE `account`=\'{target}\'', 
+    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`drop_sk1`=drop_sk1+2 WHERE `account`=\'{target}\'', 
     'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`!=\'boss\'', 
-    'skill_41':'UPDATE `status_{team_id}` SET `drop_de2`=drop_de2+2,`numb`=numb+2 WHERE `account`!=\'boss\''
+    'skill_41':'UPDATE `status_{team_id}` SET `drop_sk2`=drop_sk2+2,`numb`=numb+2 WHERE `account`!=\'boss\''
     }
 #-----------------------------------------------------------------------------------------------------
 #compute_user_action(已整合->暫時停用)
@@ -777,7 +777,7 @@ def compute_action(team_id):
 
                             except Exception as e:
                                 print(e)
-                                print('fighter' + str(tmp['action']) + 'error')
+                                print('[ERROR] career:fighter action:' + str(tmp['action']))
 
                         #traveler
                         elif career_result['career'] == 'traveler':
@@ -834,7 +834,7 @@ def compute_action(team_id):
 
                             except Exception as e:
                                 print(e)
-                                print('traveler' + str(tmp['action']) + 'error')
+                                print('[ERROR] career:traveler action:' + str(tmp['action']))
 
                         #magician
                         elif career_result['career'] == 'magician':
@@ -889,7 +889,7 @@ def compute_action(team_id):
                             
                             except Exception as e:
                                 print(e)
-                                print('magician' + str(tmp['action']) + 'error')
+                                print('[ERROR] career:magician action:' + str(tmp['action']))
 
                         #assistant
                         elif career_result['career'] == 'assistant':
@@ -969,7 +969,7 @@ def compute_action(team_id):
 
                             except Exception as e:
                                 print(e)
-                                print('assisant' + str(tmp['action']) + 'error')
+                                print('[ERROR] career:assistant action:' + str(tmp['action']))
                         
                     elif tmp['action'] == 'item_1':
                         sql = 'UPDATE `status_{team_id}` SET `hp`=hp+100 WHERE `account`=\'{target}\''
@@ -1023,7 +1023,9 @@ def compute_action(team_id):
                 sql = 'UPDATE `status_{team_id}` SET `hp`=hp-105 WHERE `account`=\'{account}\''
                 fight_modify(sql.format(team_id=team_id, account=tmp['account']))
         #--------------------------------------------------------------------------------------------------------------------
-        #計算倍率boss
+        #boss區塊
+        
+        #計算倍率
         sql = 'SELECT `drop_sk1`,`drop_sk2`, `enhance_sk1`, `enhance_sk2`, `enhance_sk3`, `enhance_sk4` FROM `status_{team_id}` WHERE `account`=\'boss\''
         enhance_status = fight_fatchone(sql.format(team_id=team_id))
         skill_times = 1
@@ -1050,47 +1052,51 @@ def compute_action(team_id):
 
         #依照類別處理技能效果
         if b_type['b_type'] == 'engineer':
-            if result['action'] == 'auto_attack':
-                sql = engineer['auto_attack'].format(team_id=team_id, num=100*skill_times)
-                fight_modify(sql)
-            
-            elif result['action'] == 'skill_1':
-                sql = engineer['skill_1'].format(team_id=team_id, num=120*skill_times)
-                fight_modify(sql)
-
-            elif result['action'] == 'skill_2':
-                sql = engineer['skill_2'].format(team_id=team_id, num=105*skill_times)
-                fight_modify(sql)
-
-                #中毒效果是否發動
-                debuff_list = ['enable', 'disable']
-                debuff = choices(debuff_list, weights=[2, 8])
-                print(debuff[0])
-                #發動
-                if debuff[0] == 'enable':
-                    sql = engineer['skill_21'].format(team_id=team_id)
+            try:
+                if result['action'] == 'auto_attack':
+                    sql = engineer['auto_attack'].format(team_id=team_id, num=100*skill_times)
                     fight_modify(sql)
-                else:
-                    pass
-
-            elif result['action'] == 'skill_3':
-                sql = engineer['skil_3'].format(team_id=team_id, num=175*skill_times)
-                fight_modify(sql)
                 
-                #睡眠效果是否發動
-                debuff_list = ['enable', 'disable']
-                debuff = choices(debuff_list, weights=[4, 6])
-                print(debuff[0])
-                #發動
-                if debuff[0] == 'enable':
-                    sql = engineer['skill_31'].format(team_id=team_id)
+                elif result['action'] == 'skill_1':
+                    sql = engineer['skill_1'].format(team_id=team_id, num=120*skill_times)
                     fight_modify(sql)
-                else:
-                    pass
 
-            elif result['action'] == 'skill_4':
-                sql = engineer['skill_4'].format(team_id=team_id, num=455*skill_times)
-                fight_modify(sql)
+                elif result['action'] == 'skill_2':
+                    sql = engineer['skill_2'].format(team_id=team_id, num=105*skill_times)
+                    fight_modify(sql)
+
+                    #中毒效果是否發動
+                    debuff_list = ['enable', 'disable']
+                    debuff = choices(debuff_list, weights=[2, 8])
+                    print(debuff[0])
+                    #發動
+                    if debuff[0] == 'enable':
+                        sql = engineer['skill_21'].format(team_id=team_id)
+                        fight_modify(sql)
+                    else:
+                        pass
+
+                elif result['action'] == 'skill_3':
+                    sql = engineer['skil_3'].format(team_id=team_id, num=175*skill_times)
+                    fight_modify(sql)
+                    
+                    #睡眠效果是否發動
+                    debuff_list = ['enable', 'disable']
+                    debuff = choices(debuff_list, weights=[4, 6])
+                    print(debuff[0])
+                    #發動
+                    if debuff[0] == 'enable':
+                        sql = engineer['skill_31'].format(team_id=team_id)
+                        fight_modify(sql)
+                    else:
+                        pass
+
+                elif result['action'] == 'skill_4':
+                    sql = engineer['skill_4'].format(team_id=team_id, num=455*skill_times)
+                    fight_modify(sql)
+            except Exception as e:
+                print(e)
+                print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
 
     except Exception as e:
         print(e)
@@ -1529,12 +1535,21 @@ async def get_action(request):
         #產生動作清單
         sql = 'SELECT `account`,`action`,`target` FROM `action_{id}`'
         result = fight_fetchall(sql.format(id=id))
-        action = '{\"act\":' + str(result) + '}'
+        chk = 0
+        #檢測隊伍所有人的動作
+        for i in range(0, len(result)):
+            if result[i]['action'] == '':
+                chk += 1
+                error_msg = str(result[i]['account']) + 'not commit action'
+                return text(error_msg)
+        if chk == 0:
+            action = '{\"act\":' + str(result) + '}'
+            #啟動執行緒計算玩家的動作
+            t_compute_action = threading.Thread(target=compute_action, args=(id, ))
+            t_compute_action.start()
+        else:
+            pass
 
-        #啟動執行緒計算玩家的動作
-        t_compute_action = threading.Thread(target=compute_action, args=(id, ))
-        t_compute_action.start()
-        
         '''#啟動執行緒計算boss的動作
         t_compute_boss_action = threading.Thread(target=compute_boss_action, args=(id, ))
         t_compute_boss_action.start()'''
