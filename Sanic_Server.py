@@ -1,3 +1,4 @@
+import builtins
 from datetime import datetime
 from sanic import Sanic
 from sanic.response import json, text
@@ -64,7 +65,7 @@ def db_modify(sql):
 
     except Exception as e:
         return e 
-#------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------
 def fight_fetchall(sql):
     result = ''
     try:
@@ -211,11 +212,9 @@ engineer = {
 
 business = {
     'auto_attack':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`!=\'boss\'', 
-    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`!=\'boss\'', 
-    'skill_11':'UPDATE `status_{team_id}` SET `gather`=\'0\' WHERE `account`=\'{target}\'', 
-    'skill_2':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`!=\'boss\'', 
-    'skill_21':'UPDATE `status_{team_id}` SET `drop_sk1`=drop_sk1+3 WHERE `account`!=\'boss\'', 
-    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`drop_sk1`=drop_sk1+2 WHERE `account`=\'{target}\'', 
+    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`gather`=\'0\' WHERE `account`=\'{target}\'', 
+    'skill_2':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`drop_sk1`=drop_sk1+3 WHERE `account`!=\'boss\'', 
+    'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num},`drop_sk2`=drop_sk2+2 WHERE `account`=\'{target}\'', 
     'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`!=\'boss\'', 
     'skill_41':'UPDATE `status_{team_id}` SET `drop_sk2`=drop_sk2+2,`numb`=numb+2 WHERE `account`!=\'boss\''
     }
@@ -460,14 +459,29 @@ def produce_boss_action(team_id):
                     elif ((remain_hp <= 0.59) and (remain_hp >= 0.3)):
                         action_list = ['skill_2', 'skill_3']
                         action = choices(action_list, weights=[3, 7])
-                        sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
-                        result = fight_modify(sql.format(team_id=team_id, action=action[0]))
+                        if action[0] == 'skill_3':
+                            sql = 'SELECT `account` FROM `status_{team_id}` WHERE `account`!=\'boss\''
+                            tar_list = fight_fetchall(sql.format(team_id=team_id))
+                            target = choices(tar_list)
+                            sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_3\',`target`=\'{target}\' WHERE `account`=\'boss\''
+                            fight_modify(sql.format(team_id=team_id, target=target[0]['account']))
+                        else:
+                            sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_2\' WHERE `account`=\'boss\''
+                            fight_modify(sql.format(team_id=team_id))
+                        
                 
                     elif ((remain_hp <= 0.29) and (remain_hp >= 0)):
                         action_list = ['skill_3', 'skill_4']
                         action = choices(action_list, weights=[2, 8])
-                        sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
-                        result = fight_modify(sql.format(team_id=team_id, action=action[0]))
+                        if action[0] == 'skill_3':
+                            sql = 'SELECT `account` FROM `status_{team_id}` WHERE `account`!=\'boss\''
+                            tar_list = fight_fetchall(sql.format(team_id=team_id))
+                            target = choices(tar_list)
+                            sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_3\',`target`=\'{target}\' WHERE `account`=\'boss\''
+                            fight_modify(sql.format(team_id=team_id, target=target[0]['account']))
+                        else:
+                            sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_4\' WHERE `account`=\'boss\''
+                            fight_modify(sql.format(team_id=team_id))
 
             #沒有人發動蓄能技
             elif len(list(result)) == 0:
@@ -480,14 +494,28 @@ def produce_boss_action(team_id):
                 if ((remain_hp <= 0.59) and (remain_hp >= 0.3)):
                     action_list = ['skill_2', 'skill_3']
                     action = choices(action_list, weights=[3, 7])
-                    sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
-                    result = fight_modify(sql.format(team_id=team_id, action=action[0]))
+                    if action[0] == 'skill_3':
+                        sql = 'SELECT `account` FROM `status_{team_id}` WHERE `account`!=\'boss\''
+                        tar_list = fight_fetchall(sql.format(team_id=team_id))
+                        target = choices(tar_list)
+                        sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_3\',`target`=\'{target}\' WHERE `account`=\'boss\''
+                        fight_modify(sql.format(team_id=team_id, target=target[0]['account']))
+                    else:
+                        sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_2\' WHERE `account`=\'boss\''
+                        fight_modify(sql.format(team_id=team_id))
                 
                 if ((remain_hp <= 0.29) and (remain_hp >= 0)):
                     action_list = ['skill_3', 'skill_4']
                     action = choices(action_list, weights=[2, 8])
-                    sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
-                    result = fight_modify(sql.format(team_id=team_id, action=action[0]))
+                    if action[0] == 'skill_3':
+                        sql = 'SELECT `account` FROM `status_{team_id}` WHERE `account`!=\'boss\''
+                        tar_list = fight_fetchall(sql.format(team_id=team_id))
+                        target = choices(tar_list)
+                        sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_3\',`target`=\'{target}\' WHERE `account`=\'boss\''
+                        fight_modify(sql.format(team_id=team_id, target=target[0]['account']))
+                    else:
+                        sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_4\' WHERE `account`=\'boss\''
+                        fight_modify(sql.format(team_id=team_id))
 
         elif (b_type == 'humanities'):
             remain_hp = b_hp / 1200
@@ -1047,7 +1075,7 @@ def compute_action(team_id):
         #取得boss的類別和動作
         sql = 'SELECT `b_type` FROM `status_{team_id}` WHERE `account`=\'boss\''
         b_type = fight_fatchone(sql.format(team_id=team_id))
-        sql = 'SELECT `action` FROM `action_{team_id}` WHERE `account`=\'boss\''
+        sql = 'SELECT `action`,`target` FROM `action_{team_id}` WHERE `account`=\'boss\''
         result = fight_fatchone(sql.format(team_id=team_id))
 
         #依照類別處理技能效果
@@ -1094,6 +1122,40 @@ def compute_action(team_id):
                 elif result['action'] == 'skill_4':
                     sql = engineer['skill_4'].format(team_id=team_id, num=455*skill_times)
                     fight_modify(sql)
+            
+            except Exception as e:
+                print(e)
+                print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
+
+        elif b_type['b_type'] == 'business':
+            try:
+                if result['action'] == 'auto_attack':
+                    sql = business['auto_attack'].format(team_id=team_id, num=90*skill_times)
+                    fight_modify(sql)
+
+                elif result['action'] == 'skill_1':
+                    sql = business['skill_1'].format(team_id=team_id, num=100*skill_times, target=result['target'])
+                    fight_modify(sql)
+
+                elif result['action'] == 'skill_2':
+                    sql = business['skill_2'].format(team_id=team_id, num=100*skill_times)
+                    fight_modify(sql)
+
+                elif result['action'] == 'skill_3':
+                    sql = business['skill_3'].format(team_id=team_id, num=150*skill_times, target=result['target'])
+                    fight_modify(sql)
+
+                elif result['action'] == 'skill_4':
+                    sql = business['skill_4'].format(team_id=team_id, num=350*skill_times)
+                    fight_modify(sql)
+                    debuff_list = ['enable', 'disable']
+                    debuff = choices(debuff_list, weights=(6, 4))
+                    if debuff[0] == 'enable':
+                        sql = business['skill_41'].format(team_id=team_id)
+                        fight_modify(sql)
+                    else:
+                        pass
+
             except Exception as e:
                 print(e)
                 print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
@@ -1545,8 +1607,7 @@ async def get_action(request):
         if chk == 0:
             action = '{\"act\":' + str(result) + '}'
             #啟動執行緒計算玩家的動作
-            t_compute_action = threading.Thread(target=compute_action, args=(id, ))
-            t_compute_action.start()
+            return text(action)
         else:
             pass
 
@@ -1554,9 +1615,20 @@ async def get_action(request):
         t_compute_boss_action = threading.Thread(target=compute_boss_action, args=(id, ))
         t_compute_boss_action.start()'''
         
-        return text(action)
     except Exception as e:
         print(str(e))
+        return text("Explode")
+
+@app.post("/compute_action")
+async def compute(request):
+    try:
+        id = request.json['id']
+        t_compute_action = threading.Thread(target=compute_action, args=(id, ))
+        t_compute_action.start()
+        return text("compute_start")
+        
+    except Exception as e:
+        print(e)
         return text("Explode")
 
 @app.post("/new_turn")
