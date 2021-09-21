@@ -732,7 +732,7 @@ def compute_action(team_id):
                 #是否可以行動
                 if (tmp['action'] == 'numb') or (tmp['action'] == 'gather') or (tmp['action'] == 'sleep'):
                     print(str(tmp['account']) + ':' + '無法行動 why:' + str(tmp['action']))
-                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`fate`=\'0\' WHERE `account`=\'{account}\''
+                    sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
                     fight_modify(sql.format(team_id=team_id, account=tmp['account']))    
                 
                 if (tmp['action'] == 'dead'):
@@ -1644,15 +1644,21 @@ async def new_turn(requset):
             tmp_update = ''
             tmp_result = result[j]
             tmp_key = list(tmp_result[j].keys())
+            update_chk = 0
             for i in range (0, len(tmp_key)):
                 if tmp_result[tmp_key[i]] == 0:
+                    update_chk += 1
                     continue
                 else:
                     tmp_result[tmp_key[i]] -= 1
                     tmp_update += tmp_key[i] + '=' + str(tmp_result[tmp_key[i]]) + ','
-            update = tmp_update.rstrip(',')
-            sql = 'UPDATE `status_{team_id}` SET {update} WHERE `account`=\'{account}\''
-            fight_modify(sql.format(update=update, team_id=team_id,account=tmp_result['account']))
+            #檢查有沒有需要減回合數
+            if update_chk != len(tmp_key):
+                update = tmp_update.rstrip(',')
+                sql = 'UPDATE `status_{team_id}` SET {update} WHERE `account`=\'{account}\''
+                fight_modify(sql.format(update=update, team_id=team_id,account=tmp_result['account']))
+            elif update_chk == len(tmp_key):
+                pass
 
         #啟動其他執行緒來產生boss的動作
         t_produce_boss = threading.Thread(target=produce_boss_action,args=(team_id, ))
