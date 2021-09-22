@@ -187,12 +187,12 @@ magician = {
     }
 
 assistant = {
-    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`!=\'boss\'', 
     'skill_2':'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+2,`enhance_de2`=enhance_de2+2 WHERE `account`=\'{target}\'', 
-    'skill_3':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0,`status_lock`=2 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_31':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_4':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
-    'skill_41':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_de2+5 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_3':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0,`status_lock`=2 WHERE `account`!=\'boss\'', 
+    'skill_31':'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`!=\'boss\'', 
+    'skill_4':'UPDATE `status_{team_id}` SET `numb`=0,`sleep`=0,`poison`=0,`blood`=0,`drop_de1`=0,`drop_de2`=0,`drop_sk1`=0,`drop_sk2`=0 WHERE `account`!=\'boss\'', 
+    'skill_41':'UPDATE `status_{team_id}` SET `enhance_de3`=enhance_de3+5 WHERE `account`!=\'boss\'', 
     'skill_u_1':'UPDATE `status_{team_id}` SET `gather`=gather+1 WHERE `account`=\'{account}\'',
     'skill_u_11':'UPDATE `status_{team_id}` SET `hp`=hp*0.5 WHERE `account`=\'{target}\'', 
     'skill_u_2':'UPDATE `status_{team_id}` SET `gather`=gather+3 WHERE `account`=\'{account}\'', 
@@ -923,7 +923,7 @@ def compute_action(team_id):
                         elif career_result['career'] == 'assistant':
                             try:
                                 if tmp['action'] == 'skill_1':
-                                    sql = assistant[tmp['action']].format(team_id=team_id, num=150, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                    sql = assistant[tmp['action']].format(team_id=team_id, num=150)
                                     fight_modify(sql)
                                     sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
                                     fight_modify(sql.format(team_id=team_id, account=tmp['account']))
@@ -935,17 +935,17 @@ def compute_action(team_id):
                                     fight_modify(sql.format(team_id=team_id, account=tmp['account']))
 
                                 elif tmp['action'] == 'skill_3':
-                                    sql = assistant[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                    sql = assistant['skill_3'].format(team_id=team_id)
                                     fight_modify(sql)
-                                    sql = assistant['skill_31'].format(team_id=team_id, num=200*skill_times, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                    sql = assistant['skill_31'].format(team_id=team_id, num=200*skill_times)
                                     fight_modify(sql)
                                     sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
                                     fight_modify(sql.format(team_id=team_id, account=tmp['account']))
 
                                 elif tmp['action'] == 'skill_4':
-                                    sql = assistant[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                    sql = assistant['skill_4'].format(team_id=team_id)
                                     fight_modify(sql)
-                                    sql = assistant[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                    sql = assistant['skill_41'].format(team_id=team_id)
                                     fight_modify(sql)
                                     sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\' WHERE `account`=\'{account}\''
                                     fight_modify(sql.format(team_id=team_id, account=tmp['account']))
