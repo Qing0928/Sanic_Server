@@ -1642,22 +1642,27 @@ async def new_turn(requset):
         result = fight_fetchall(sql.format(team_id=team_id))
         for j in range(0, len(result)):
             tmp_update = ''
-            tmp_result = result[j]
-            tmp_key = list(tmp_result[j].keys())
-            update_chk = 0
+            tmp_key = list(result[j].keys())
+            update_chk = False
             for i in range (0, len(tmp_key)):
-                if tmp_result[tmp_key[i]] == 0:
-                    update_chk += 1
+                #print(result[j])
+                if tmp_key[i] == 'account':
+                    continue
+                elif result[j][tmp_key[i]] == 0:
                     continue
                 else:
-                    tmp_result[tmp_key[i]] -= 1
-                    tmp_update += tmp_key[i] + '=' + str(tmp_result[tmp_key[i]]) + ','
+                    update_chk = True
+                    result[j][tmp_key[i]] -= 1
+                    tmp_update += tmp_key[i] + '=' + str(result[j][tmp_key[i]]) + ','
             #檢查有沒有需要減回合數
-            if update_chk != len(tmp_key):
+            if update_chk == True:
                 update = tmp_update.rstrip(',')
                 sql = 'UPDATE `status_{team_id}` SET {update} WHERE `account`=\'{account}\''
-                fight_modify(sql.format(update=update, team_id=team_id,account=tmp_result['account']))
-            elif update_chk == len(tmp_key):
+                print(sql.format(update=update, team_id=team_id,account=result[j]['account']))
+                test_sql = fight_modify(sql.format(update=update, team_id=team_id,account=result[j]['account']))
+                print(test_sql)
+            else:
+                print('nothing to change')
                 pass
 
         #啟動其他執行緒來產生boss的動作
@@ -1687,15 +1692,17 @@ async def finish_game(request):
         account = request.json['account']
         id = request.json['id']
         data = request.json['data']
-        sql = 'UPDATE `user_info` SET play_status=0 WHERE account=' + '\'' + account + '\''
-        db_modify(sql)
+        sql = 'UPDATE `user_info` SET `play_status`=0 WHERE `account`=\'{account}\''
+        db_modify(sql.format(account=account))
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         sql = 'INSERT INTO `reward` (account, team_id, data, time) VALUES (\'{account}\',\'{id}\',\'{data}\',\'{now}\')'
         db_modify(sql.format(account=account,id=id,data=data,now=now))
         sql = 'DROP TABLE IF EXISTS `action_{id}`'
-        fight_modify(sql.format(id=id))
+        result = fight_modify(sql.format(id=id))
+        print(result)
         sql = 'DROP TABLE IF EXISTS `status_{id}`'
-        fight_modify(sql.format(id=id))
+        result = fight_modify(sql.format(id=id))
+        print(result)
         return text("done")
     except Exception as e:
         print(str(e))
