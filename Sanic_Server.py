@@ -676,8 +676,9 @@ def compute_action(team_id):
             if chk > 0:
                 break
 
-        #補師持續恢復技能檢查，動作都進來時優先發動
+        skill_times = 1
         if chk == 0:
+            #補師持續恢復技能檢查，動作都進來時優先發動
             sql = 'SELECT `assist_lock`,`account` FROM `status_{team_id}` WHERE `account`!=\'boss\''
             assist_lock = fight_fetchall(sql.format(team_id=team_id))
             for i in range(0, len(assist_lock)):
@@ -687,6 +688,16 @@ def compute_action(team_id):
                 if assist_lock[i]['assist_lock'] > 0:
                     sql = 'UPDATE `status_{team_id}` SET `hp`=hp+{num} WHERE `account`=\'{account}\''
                     fight_modify(sql.format(team_id=team_id, num=200, account=assist_lock[i]['account']))
+
+            #行者的Ultra_skill_u_1檢查
+            for i in range(0, len(result)):
+                sql = 'SELECT `skill_u_1`,`career` FROM `user_skill` WHERE `account`=\'{account}\''
+                tra_usk = db_fetchone(sql.format(account=result[i]['account']))
+                if (tra_usk['career'] != 'traveler'):
+                    break
+                if (tra_usk['career'] == 'traveler') and (tra_usk['skill_u_1'] == 1):
+                    skill_times *= 1.2
+
         else:
             pass
 
@@ -703,7 +714,7 @@ def compute_action(team_id):
                 #計算技能倍率
                 sql = 'SELECT `drop_sk1`,`drop_sk2`, `enhance_sk1`, `enhance_sk2`, `enhance_sk3`, `enhance_sk4` FROM `status_{team_id}` WHERE account=\'{account}\''
                 enhance_status = fight_fatchone(sql.format(team_id=team_id, account=tmp['account']))
-                skill_times = 1
+                #skill_times = 1
                 if enhance_status['drop_sk1'] > 0:
                     skill_times *= 0.85
                 if enhance_status['drop_sk2'] > 0:
@@ -810,14 +821,6 @@ def compute_action(team_id):
                         #traveler
                         elif career_result['career'] == 'traveler':
                             try:
-                                sql = 'SELECT `skill_u_1` FROM `user_skill` WHERE `account`=\'{account}\''
-                                u_chk = db_fetchone(sql.format(account=tmp['account']))
-                                if u_chk['skill_u_1'] != 0:
-                                    sql = 'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+3 WHERE `account`!=\'boss\''
-                                    fight_modify(sql.format(team_id=team_id))
-                                else:
-                                    pass
-
                                 if tmp['action'] == 'skill_1':
                                     sql = traveler[tmp['action']].format(team_id=team_id, target=tmp['target'], num=60*skill_times)
                                     fight_modify(sql)
