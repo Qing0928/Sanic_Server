@@ -148,7 +148,8 @@ status_table = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
 action_table = 'CREATE TABLE IF NOT EXISTS `action_{id}`(\
                         `account` varchar(40) PRIMARY KEY NOT NULL, \
                         `action` varchar(40) NOT NULL DEFAULT \'\', \
-                        `target` varchar(40) NOT NULL DEFAULT \'\' \
+                        `target` varchar(40) NOT NULL DEFAULT \'\', \
+                        `clear_lock` int NOT NULL DEFAULT \'0\'\
                         )'
 #-----------------------------------------------------------------------------------------------------
 #user_skill_list
@@ -765,88 +766,100 @@ def compute_action(team_id):
         sql = 'SELECT `action`,`target` FROM `action_{team_id}` WHERE `account`=\'boss\''
         result = fight_fatchone(sql.format(team_id=team_id))
 
+        #檢查boss可不可以動作
+        action_chk = True
+        sql = 'SELECT `numb`,`sleep` FROM `status_{team_id}` WHERE `account`=\'boss\''
+        action_enable = fight_fatchone(sql.format(team_id=team_id))
+        if (action_enable['numb'] != 0) or (action_enable['sleep'] != 0):
+            action_chk = False
+        else:
+            action_chk = True
+        
         #依照類別處理技能效果
-        if b_type['b_type'] == 'engineer':
-            try:
-                if result['action'] == 'auto_attack':
-                    sql = engineer['auto_attack'].format(team_id=team_id, num=100*skill_times)
-                    fight_modify(sql)
-                
-                elif result['action'] == 'skill_1':
-                    sql = engineer['skill_1'].format(team_id=team_id, num=120*skill_times)
-                    fight_modify(sql)
-
-                elif result['action'] == 'skill_2':
-                    sql = engineer['skill_2'].format(team_id=team_id, num=105*skill_times)
-                    fight_modify(sql)
-
-                    #中毒效果是否發動
-                    debuff_list = ['enable', 'disable']
-                    debuff = choices(debuff_list, weights=[2, 8])
-                    print(debuff[0])
-                    #發動
-                    if debuff[0] == 'enable':
-                        sql = engineer['skill_21'].format(team_id=team_id)
+        if action_chk == True:
+            if b_type['b_type'] == 'engineer':
+                try:
+                    if result['action'] == 'auto_attack':
+                        sql = engineer['auto_attack'].format(team_id=team_id, num=100*skill_times)
                         fight_modify(sql)
-                    else:
-                        pass
-
-                elif result['action'] == 'skill_3':
-                    sql = engineer['skil_3'].format(team_id=team_id, num=175*skill_times)
-                    fight_modify(sql)
                     
-                    #睡眠效果是否發動
-                    debuff_list = ['enable', 'disable']
-                    debuff = choices(debuff_list, weights=[4, 6])
-                    print(debuff[0])
-                    #發動
-                    if debuff[0] == 'enable':
-                        sql = engineer['skill_31'].format(team_id=team_id)
+                    elif result['action'] == 'skill_1':
+                        sql = engineer['skill_1'].format(team_id=team_id, num=120*skill_times)
                         fight_modify(sql)
-                    else:
-                        pass
 
-                elif result['action'] == 'skill_4':
-                    sql = engineer['skill_4'].format(team_id=team_id, num=455*skill_times)
-                    fight_modify(sql)
-            
-            except Exception as e:
-                print(e)
-                print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
-
-        elif b_type['b_type'] == 'business':
-            try:
-                if result['action'] == 'auto_attack':
-                    sql = business['auto_attack'].format(team_id=team_id, num=90*skill_times)
-                    fight_modify(sql)
-
-                elif result['action'] == 'skill_1':
-                    sql = business['skill_1'].format(team_id=team_id, num=100*skill_times, target=result['target'])
-                    fight_modify(sql)
-
-                elif result['action'] == 'skill_2':
-                    sql = business['skill_2'].format(team_id=team_id, num=100*skill_times)
-                    fight_modify(sql)
-
-                elif result['action'] == 'skill_3':
-                    sql = business['skill_3'].format(team_id=team_id, num=150*skill_times, target=result['target'])
-                    fight_modify(sql)
-
-                elif result['action'] == 'skill_4':
-                    sql = business['skill_4'].format(team_id=team_id, num=350*skill_times)
-                    fight_modify(sql)
-                    debuff_list = ['enable', 'disable']
-                    debuff = choices(debuff_list, weights=(6, 4))
-                    if debuff[0] == 'enable':
-                        sql = business['skill_41'].format(team_id=team_id)
+                    elif result['action'] == 'skill_2':
+                        sql = engineer['skill_2'].format(team_id=team_id, num=105*skill_times)
                         fight_modify(sql)
-                    else:
-                        pass
 
-            except Exception as e:
-                print(e)
-                print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
+                        #中毒效果是否發動
+                        debuff_list = ['enable', 'disable']
+                        debuff = choices(debuff_list, weights=[2, 8])
+                        print(debuff[0])
+                        #發動
+                        if debuff[0] == 'enable':
+                            sql = engineer['skill_21'].format(team_id=team_id)
+                            fight_modify(sql)
+                        else:
+                            pass
 
+                    elif result['action'] == 'skill_3':
+                        sql = engineer['skil_3'].format(team_id=team_id, num=175*skill_times)
+                        fight_modify(sql)
+                        
+                        #睡眠效果是否發動
+                        debuff_list = ['enable', 'disable']
+                        debuff = choices(debuff_list, weights=[4, 6])
+                        print(debuff[0])
+                        #發動
+                        if debuff[0] == 'enable':
+                            sql = engineer['skill_31'].format(team_id=team_id)
+                            fight_modify(sql)
+                        else:
+                            pass
+
+                    elif result['action'] == 'skill_4':
+                        sql = engineer['skill_4'].format(team_id=team_id, num=455*skill_times)
+                        fight_modify(sql)
+                
+                except Exception as e:
+                    print(e)
+                    print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
+
+            elif b_type['b_type'] == 'business':
+                try:
+                    if result['action'] == 'auto_attack':
+                        sql = business['auto_attack'].format(team_id=team_id, num=90*skill_times)
+                        fight_modify(sql)
+
+                    elif result['action'] == 'skill_1':
+                        sql = business['skill_1'].format(team_id=team_id, num=100*skill_times, target=result['target'])
+                        fight_modify(sql)
+
+                    elif result['action'] == 'skill_2':
+                        sql = business['skill_2'].format(team_id=team_id, num=100*skill_times)
+                        fight_modify(sql)
+
+                    elif result['action'] == 'skill_3':
+                        sql = business['skill_3'].format(team_id=team_id, num=150*skill_times, target=result['target'])
+                        fight_modify(sql)
+
+                    elif result['action'] == 'skill_4':
+                        sql = business['skill_4'].format(team_id=team_id, num=350*skill_times)
+                        fight_modify(sql)
+                        debuff_list = ['enable', 'disable']
+                        debuff = choices(debuff_list, weights=(6, 4))
+                        if debuff[0] == 'enable':
+                            sql = business['skill_41'].format(team_id=team_id)
+                            fight_modify(sql)
+                        else:
+                            pass
+
+                except Exception as e:
+                    print(e)
+                    print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
+
+        else:
+            print('boss無法行動 why ' + 'numb:' + str(action_enable['numb']) + ' sleep:' + str(action_enable['sleep']))
     except Exception as e:
         print(e)
 #-----------------------------------------------------------------------------------------------------
@@ -1284,24 +1297,72 @@ async def get_action(request):
         #產生動作清單
         sql = 'SELECT `account`,`action`,`target` FROM `action_{id}`'
         result = fight_fetchall(sql.format(id=id))
-        chk = 0
+        chk = True
         #檢測隊伍所有人的動作
         for i in range(0, len(result)):
             if result[i]['action'] == '':
-                chk += 1
-                error_msg = str(result[i]['account']) + 'not commit action'
+                chk =False
+                error_msg = str(result[i]['account']) + ' not commit action'
                 return text(error_msg)
-        if chk == 0:
+            else:
+                chk = True
+        
+        if chk == True:
             action = '{\"act\":' + str(result) + '}'
-            #啟動執行緒計算玩家的動作
+            #一個人取得clear_lock就+1
+            sql = 'UPDATE `action_{team_id}` SET `clear_lock`=clear_lock+1'
+            fight_modify(sql.format(team_id=id))
+
+            #清空檢測
+            sql = 'SELECT `leader`,`member1`,`member2`,`member3` FROM `teams` WHERE `id`=\'{team_id}\''
+            member_list = db_fetchone(sql.format(team_id=id))
+            member_key = list(member_list.keys())
+            member_num = 0
+            for i in range(0, len(member_key)):
+                if (member_list[member_key[i]]) != '':
+                    member_num += 1
+                else:
+                    continue
+            print('隊伍人數' + str(member_num))
+
+            sql = 'SELECT `clear_lock` FROM `action_{team_id}` WHERE `account`=\'boss\''
+            result = fight_fatchone(sql.format(team_id=id))
+            if result['clear_lock'] == member_num:
+                print('累計取得次數:' + str(result['clear_lock']))
+                print('clear start')
+                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'\''
+                fight_modify(sql.format(team_id=id))
+            else:
+                print('累計取得次數:' + str(result['clear_lock']))
+                print('not yet')
+            
             return text(action)
         else:
             pass
-
-        '''#啟動執行緒計算boss的動作
-        t_compute_boss_action = threading.Thread(target=compute_boss_action, args=(id, ))
-        t_compute_boss_action.start()'''
         
+        #清空檢測
+        sql = 'SELECT `leader`,`member1`,`member2`,`member3` FROM `teams` WHERE `id`=\'{team_id}\''
+        member_list = db_fetchone(sql.format(team_id=id))
+        member_key = list(member_list.keys())
+        member_num = 0
+        for i in range(0, len(member_key)):
+            if (member_list[member_key[i]]) != '':
+                member_num += 1
+            else:
+                continue
+        print('隊伍人數' + str(member_num))
+
+        sql = 'SELECT `clear_lock` FROM `action_{team_id}` WHERE `account`=\'boss\''
+        result = fight_fatchone(sql.format(team_id=id))
+        if result['clear_lock'] == member_num:
+            print('累計取得次數:' + str(result['clear_lock']))
+            print('clear start')
+            sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',clear=\'\''
+            fight_modify(sql.format(team_id=id))
+        else:
+            print('累計取得次數:' + str(result['clear_lock']))
+            print('not yet')
+
     except Exception as e:
         print(str(e))
         return text("Explode")
@@ -1322,10 +1383,6 @@ async def compute(request):
 async def new_turn(requset):
     try:
         team_id = requset.json['id']
-
-        #清空action
-        sql = 'UPDATE `action`=\'\',`target`=\'\' FROM `action_{team_id}` WHERE `account`!=\'boss\''
-        fight_modify(sql.format(team_id=team_id))
 
         #所有效果的回合數-1
         sql = 'SELECT `account`,`assist_lock`,`enhance_sk1`,`enhance_sk2`,`enhance_sk3`,`enhance_sk4`,`enhance_de1`,`enhance_de2`,`enhance_de3`,`gather`,`immortal`,`numb`,`sleep`,`poison`,`blood`,`drop_de1`,`drop_de2`,`drop_sk1`,`drop_sk2` \
