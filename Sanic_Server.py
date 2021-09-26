@@ -1232,37 +1232,6 @@ async def duel_start(request):
         print(str(e))
         return text("Explode")
 
-@app.post("/commit_status_data")#暫時停用
-async def commit_status_data(request):
-    try:
-        id = request.json['id']
-        account = request.json['account']
-        start = time.time()
-        #fdata is status json
-        fdata = request.json #type of fdata is dict
-        #key of fdata is status name 
-        l_fdata = list(fdata.keys()) #transfer keys of fdata into list
-        sql_update = ''
-        #create update values
-        for i in range (0, len(l_fdata)):
-            if l_fdata[i] == 'id' or 'account':
-                continue
-            elif i <(len(fdata) - 1):
-                sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\'' + ',' 
-                #`column`=`values`,
-            else:
-                sql_update += l_fdata[i] + '=' + '\'' + str(fdata[l_fdata[i]]) + '\''
-        sql = 'UPDATE `status_' + str(id) + '`' + ' SET ' + sql_update + ' WHERE account=' + '\'' + account + '\''
-        #sql = UPDATE `status_id` SET col1=val1, col2=val2... WHERE `account`=account
-        db_modify(sql)
-        end = time.time()
-        cost = end - start
-        print('time cost:' + str(round(cost*1000, 3)) + 'ms')
-        return text('done')
-    except Exception as e:
-        print(str(e))
-        return text("Explode")
-
 @app.post("/get_last_status")
 async def get_last_status(request):
     try:
@@ -1417,18 +1386,6 @@ async def new_turn(requset):
         t_produce_boss = threading.Thread(target=produce_boss_action,args=(team_id, ))
         t_produce_boss.start()
 
-        return text("done")
-    except Exception as e:
-        print(str(e))
-        return text("Explode")
-
-@app.post("/end_turn")#暫時停用
-async def end_turn(request):
-    try:
-        id = request.json['id']
-        account = request.json['account']
-        sql = 'UPDATE `action_{id}` SET `action`=\'\' WHERE `account`=\'{account}\''
-        fight_modify(sql.format(id=id,account=account))
         return text("done")
     except Exception as e:
         print(str(e))
