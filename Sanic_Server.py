@@ -1,4 +1,3 @@
-import builtins
 from datetime import datetime
 from sanic import Sanic
 from sanic.response import json, text
@@ -228,7 +227,8 @@ def produce_boss_action(team_id):
         result = fight_fatchone(sql.format(team_id=team_id))
         b_hp = result['hp']
         b_type = result['b_type']
-        
+        action=''
+
         if (b_type == 'engineer'):
             remain_hp = b_hp / 1000
 
@@ -860,6 +860,10 @@ def compute_action(team_id):
 
         else:
             print('boss無法行動 why ' + 'numb:' + str(action_enable['numb']) + ' sleep:' + str(action_enable['sleep']))
+        
+        sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'0\''
+        clear_result = fight_modify(sql.format(team_id=team_id))
+        print(clear_result)
     except Exception as e:
         print(e)
 #-----------------------------------------------------------------------------------------------------
@@ -1298,9 +1302,10 @@ async def get_action(request):
             result = fight_fatchone(sql.format(team_id=id))
             if result['clear_lock'] == member_num:
                 print('累計取得次數:' + str(result['clear_lock']))
-                print('clear start')
-                sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'\''
-                fight_modify(sql.format(team_id=id))
+                print('everyone get action')
+                #sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'0\''
+                #clear_result = fight_modify(sql.format(team_id=id))
+                #print('number of change column:' + str(clear_result))
             else:
                 print('累計取得次數:' + str(result['clear_lock']))
                 print('not yet')
@@ -1308,29 +1313,6 @@ async def get_action(request):
             return text(action)
         else:
             pass
-        
-        #清空檢測
-        sql = 'SELECT `leader`,`member1`,`member2`,`member3` FROM `teams` WHERE `id`=\'{team_id}\''
-        member_list = db_fetchone(sql.format(team_id=id))
-        member_key = list(member_list.keys())
-        member_num = 0
-        for i in range(0, len(member_key)):
-            if (member_list[member_key[i]]) != '':
-                member_num += 1
-            else:
-                continue
-        print('隊伍人數' + str(member_num))
-
-        sql = 'SELECT `clear_lock` FROM `action_{team_id}` WHERE `account`=\'boss\''
-        result = fight_fatchone(sql.format(team_id=id))
-        if result['clear_lock'] == member_num:
-            print('累計取得次數:' + str(result['clear_lock']))
-            print('clear start')
-            sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',clear=\'\''
-            fight_modify(sql.format(team_id=id))
-        else:
-            print('累計取得次數:' + str(result['clear_lock']))
-            print('not yet')
 
     except Exception as e:
         print(str(e))
