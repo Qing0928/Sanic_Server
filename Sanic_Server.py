@@ -177,7 +177,7 @@ traveler = {
 
 magician = {
     'skill_1':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
-    'skill_2':'UPDATE `status_{team_id}` SET `enhance_de1`=enhance_de1+1 WHERE `account`=\'{m0}\' or `account`=\'{m1}\' or `account`=\'{m2}\' or `account`=\'{m3}\'', 
+    'skill_2':'UPDATE `status_{team_id}` SET `enhance_de1`=enhance_de1+1 WHERE `account`!=\'boss\'', 
     'skill_3':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`=\'{target}\'', 
     'skill_31':'UPDATE `status_{team_id}` SET `enhance_sk2`=enhance_sk2+2 WHERE `account`=\'{account}\'', 
     'skill_4':'UPDATE `status_{team_id}` SET `gather`=gather+2 WHERE `account`=\'{account}\'', 
@@ -238,19 +238,19 @@ def produce_boss_action(team_id):
                 sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
                 result = fight_modify(sql.format(team_id=team_id, action=action[0]))
 
-            elif ((remain_hp >= 0.5) and (remain_hp <= 0.74)):
+            elif ((remain_hp >= 0.5) and (remain_hp < 0.75)):
                 action_list = ['skill_1', 'skill_2']
                 action = choices(action_list, weights=[4, 6])
                 sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
                 result = fight_modify(sql.format(team_id=team_id, action=action[0]))
 
-            elif ((remain_hp >= 0.3) and (remain_hp <= 0.49)):
+            elif ((remain_hp >= 0.3) and (remain_hp < 0.5)):
                 action_list = ['skill_2', 'skill_3']
                 action = choices(action_list, weights=[2, 8])
                 sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
                 result = fight_modify(sql.format(team_id=team_id, action=action[0]))
             
-            elif ((remain_hp >= 0) and (remain_hp <= 0.29)):
+            elif ((remain_hp >= 0) and (remain_hp < 0.3)):
                 action_list = ['skill_3', 'skill_4']
                 action = choices(action_list, weights=[1, 9])
                 sql = 'UPDATE `action_{team_id}` SET `action`=\'{action}\' WHERE `account`=\'boss\''
@@ -602,7 +602,7 @@ def compute_action(team_id):
                                     fight_modify(sql)
 
                                 elif tmp['action'] == 'skill_2':
-                                    sql = magician[tmp['action']].format(team_id=team_id, m0=result[0]['account'], m1=result[1]['account'], m2=result[2]['account'], m3=result[3]['account'])
+                                    sql = magician[tmp['action']].format(team_id=team_id)
                                     fight_modify(sql)
 
                                 elif tmp['action'] == 'skill_3':
