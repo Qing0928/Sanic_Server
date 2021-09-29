@@ -606,7 +606,7 @@ def compute_action(team_id):
                                     fight_modify(sql)
 
                                 elif tmp['action'] == 'skill_3':
-                                    sql = magician[tmp['action']].format(team_id=team_id, target=tmp['target'], num=100*skill_times)
+                                    sql = magician['skill_3'].format(team_id=team_id, target=tmp['target'], num=100*skill_times)
                                     fight_modify(sql)
                                     sql = magician['skill_31'].format(team_id=team_id, account=tmp['account'])
                                     fight_modify(sql)
@@ -860,10 +860,12 @@ def compute_action(team_id):
 
         else:
             print('boss無法行動 why ' + 'numb:' + str(action_enable['numb']) + ' sleep:' + str(action_enable['sleep']))
-        
-        sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'0\''
+
+        #清空動作
+        '''sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'0\''
         clear_result = fight_modify(sql.format(team_id=team_id))
-        print(clear_result)
+        print('動作已經清空，清空行數:' + str(clear_result))'''
+        
     except Exception as e:
         print(e)
 #-----------------------------------------------------------------------------------------------------
@@ -1257,6 +1259,7 @@ async def user_action(request):
         tar = request.json['tar']
         sql = 'UPDATE `action_{team_id}` SET `action`=\'{act}\',`target`=\'{tar}\' WHERE `account`=\'{account}\''
         fight_modify(sql.format(team_id=id, act=act, tar=tar, account=account))
+
         return text("done")
     except Exception as e:
         print(str(e))
@@ -1286,7 +1289,7 @@ async def get_action(request):
             sql = 'UPDATE `action_{team_id}` SET `clear_lock`=clear_lock+1'
             fight_modify(sql.format(team_id=id))
 
-            #清空檢測
+            '''#清空檢測
             sql = 'SELECT `leader`,`member1`,`member2`,`member3` FROM `teams` WHERE `id`=\'{team_id}\''
             member_list = db_fetchone(sql.format(team_id=id))
             member_key = list(member_list.keys())
@@ -1300,7 +1303,7 @@ async def get_action(request):
 
             sql = 'SELECT `clear_lock` FROM `action_{team_id}` WHERE `account`=\'boss\''
             result = fight_fatchone(sql.format(team_id=id))
-            if result['clear_lock'] == member_num:
+            if result['clear_lock'] >= member_num:
                 print('累計取得次數:' + str(result['clear_lock']))
                 print('everyone get action')
                 #sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'0\''
@@ -1308,7 +1311,7 @@ async def get_action(request):
                 #print('number of change column:' + str(clear_result))
             else:
                 print('累計取得次數:' + str(result['clear_lock']))
-                print('not yet')
+                print('not yet')'''
             
             return text(action)
         else:
@@ -1324,8 +1327,45 @@ async def compute(request):
         id = request.json['id']
         t_compute_action = threading.Thread(target=compute_action, args=(id, ))
         t_compute_action.start()
+
         return text("compute_start")
         
+    except Exception as e:
+        print(e)
+        return text("Explode")
+
+@app.post("/clear_action")
+async def clear_action(request):
+    try:
+        id = request.json['id']
+
+        sql = 'SELECT `leader`,`member1`,`member2`,`member3` FROM `teams` WHERE `id`=\'{team_id}\''
+        member_list = db_fetchone(sql.format(team_id=id))
+        member_key = list(member_list.keys())
+        member_num = 0
+        for i in range(0, len(member_key)):
+            if (member_list[member_key[i]]) != '':
+                member_num += 1
+            else:
+                continue
+        print('隊伍人數：' + str(member_num))
+
+        sql = 'SELECT `clear_lock` FROM `action_{team_id}` WHERE `account`=\'boss\''
+        result = fight_fatchone(sql.format(team_id=id))
+
+        if result['clear_lock'] >= member_num:
+            print('累計取得次數：' + str(result['clear_lock']))
+            print('everyone get action')
+            sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'0\''
+            clear_result = fight_modify(sql.format(team_id=id))
+            print('動作已經清空，清空行數:' + str(clear_result))
+            return text("clear done")
+
+        else:
+            print('累計取得次數：' + str(result['clear_lock']))
+            print('還有人沒取得動作')
+            return text("waiting")
+
     except Exception as e:
         print(e)
         return text("Explode")
