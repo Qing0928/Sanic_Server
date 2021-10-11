@@ -4,8 +4,9 @@ from sanic.response import json, text
 import pymysql.cursors
 from random import randint,choices
 import time
-#import json as js
+import json as js
 import threading
+from pprint import pprint
 
 app = Sanic("ARGame_Server")
 #lock = threading.Lock()#多執行緒鎖定
@@ -1138,7 +1139,7 @@ async def get_team_id(request):
         print(str(e))
         return text("Explode")
 
-@app.post("get_team_member")
+@app.post("/get_team_member")
 async def get_team_member(request):
     try:
         id = request.json['id']
@@ -1148,6 +1149,42 @@ async def get_team_member(request):
     except Exception as e:
         print(str(e))
         return text("Explode")
+
+@app.post("/get_team_profile")
+async def get_team_profile(requset):
+    try:
+        id = requset.json['id']
+
+        num = {'member_num':0}
+        name = {}
+        career = {} 
+        team = {'team_num':'', 'member_name':'', 'member_career':''}
+
+        sql = 'SELECT * FROM `teams` WHERE `id`=\'{}\''.format(id)
+        member_list = db_fetchone(sql)
+
+        member_num = 0
+        for i in member_list.keys():
+            if (member_list[i] != '') and (i != 'id'):
+                member_num += 1
+                sql = 'SELECT `name` FROM `user_info` WHERE `account`=\'{}\''.format(member_list[i])
+                member_name = db_fetchone(sql)
+                name.setdefault(member_list[i], member_name['name'])
+                sql = 'SELECT `career` FROM `user_skill` WHERE `account`=\'{}\''.format(member_list[i])
+                member_skill = db_fetchone(sql)
+                career.setdefault(member_list[i], member_skill['career'])
+        
+        num['member_num'] = member_num
+        team['team_num'] = [num]
+        team['member_name'] = [name]
+        team['member_career'] = [career]
+        team_profile = js.dumps(team)
+        
+        pprint(team_profile)
+        return text(team_profile)
+    
+    except Exception as e:
+        print(e)
 #-----------------------------------------------------------------------------------------------------
 #about duel issue
 @app.post("/duel_start")
