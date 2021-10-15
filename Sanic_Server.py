@@ -1065,11 +1065,14 @@ async def create_team(request):
     try:
         account = request.json['account']
         id = randint(100000, 999999)
-        sql_leader = 'INSERT INTO `teams` ' + '(leader, id) VALUES ' + '(\'' + account + '\',' + str(id) + ')'
+        #sql_leader = 'INSERT INTO `teams` ' + '(leader, id) VALUES ' + '(\'' + account + '\',' + str(id) + ')'
+        sql_leader = 'INSERT INTO `teams` (leader, id) VALUES (\'{}\', \'{}\')'.format(account, id)
         db_modify(sql_leader)
-        sql_team_id = 'UPDATE `user_info` SET `team_id`=' + str(id) + ' WHERE account=' + '\'' + account + '\''
+        #sql_team_id = 'UPDATE `user_info` SET `team_id`=' + str(id) + ' WHERE account=' + '\'' + account + '\''
+        sql_team_id = 'UPDATE `user_info` SET `team_id`=\'{}\' WHERE `account`=\'{}\''.format(id, account)
         db_modify(sql_team_id)
         return text("create done")
+    
     except Exception as e:
         print(str(e))
         return text("Explode")
@@ -1087,54 +1090,63 @@ async def join_party(request):
             
             #find out which member is empty
             if result[tar] == '':
-                #sql = 'UPDATE `teams` SET ' + tar + '=' + '\'' + account + '\'' + ' WHERE id=' + str(id)
-                #sql = UPDARE `teams` SET member*=account WHERE id=******
-                sql = 'UPDATE `teams` SET `{member}`=\'{account}\' WHERE `id`=\'{id}\''
-                db_modify(sql.format(member=tar, account=account, id=id))
-                #sql = 'UPDATE `user_info` SET `team_id`=' + str(id) + ' WHERE account=' + '\'' + account + '\''
-                sql = 'UPDATE `user_info` SET `team_id`=\'{id}\' WHERE `account`=\'{account}\''
-                db_modify(sql.format(id=id, account=account))
+                sql = 'UPDATE `teams` SET `{}`=\'{}\' WHERE `id`=\'{}\''.format(tar, account, id)
+                db_modify(sql)
+                sql = 'UPDATE `user_info` SET `team_id`=\'{}\' WHERE `account`=\'{}\''.format(id, account)
+                db_modify(sql)
                 return text("done")
             
             elif (i==3) and (result[tar] != ''):
                 return text("team is full")
+
     except Exception as e:
         print(str(e))
         return text("Explode")
 
 @app.post("/quit_team")
 async def quit_team(request):
-    start = time.time()
     try:
         account = request.json['account']
         id = request.json['id']
-        sql = 'SELECT * FROM `teams` WHERE id=' + str(id)
+
+        sql = 'SELECT * FROM `teams` WHERE `id`=\'{}\''.format(id)
         result = db_fetchone(sql)#type of `result` is dict
-        for i in range (0, 4):
-            tar = list(result.keys())[i]#transfer keys of `result` into list 
-            if (result[tar] == str(account)) and (tar != 'leader'):#find out account in which member and check is not leader
-                sql = 'UPDATE `teams` SET ' + tar + '=\'\'' + ' WHERE id=' + str(id)
-                #sql = UPDATE `teams` SET member*='' WHERE id=******
-                db_modify(sql)
-                end = time.time()
-                print('Time use:' + str(end - start))
-                return text("done")
-            elif (result[tar] == str(account)) and (tar == 'leader'):#delete whole team
-                sql = 'DELETE FROM `teams` WHERE ' + tar + '=\'' + str(account) + '\''
-                #sql = DELETE FROM `teams` WHERE member*=account
-                db_modify(sql)
-                return text("done")
+        if result == None:
+            return text("nonexistent")
+        else:
+            for i in range (0, 4):
+                tar = list(result.keys())[i]#transfer keys of `result` into list 
+                if (result[tar] == account) and (tar != 'leader'):#find out account in which member and check is not leader
+                    sql = 'UPDATE `teams` SET `{}`=\'\' WHERE `id`=\'{}\''.format(tar, id)
+                    #sql = 'UPDATE `teams` SET ' + tar + '=\'\'' + ' WHERE id=' + str(id)
+                    #sql = UPDATE `teams` SET member*='' WHERE id=******
+                    db_modify(sql)
+                    sql = 'UPDATE `user_info` SET `team_id`=\'0\' WHERE `account`=\'{}\''.format(account)
+                    db_modify(sql)
+                    return text("done")
+
+                elif (result[tar] == str(account)) and (tar == 'leader'):#delete whole team
+                    sql = 'DELETE FROM `teams` WHERE `{}`=\'{}\''.format(tar, account)
+                    #sql = 'DELETE FROM `teams` WHERE ' + tar + '=\'' + str(account) + '\''
+                    #sql = DELETE FROM `teams` WHERE leader=account
+                    db_modify(sql)
+                    sql = 'UPDATE `user_info` SET `team_id`=\'\' WHERE `team_id`=\'{}\''.format(id)
+                    db_modify(sql)
+
+                    return text("done")
+
     except Exception as e:
-        print(str(e))
+        print(e)
         return text("Explode")
 
 @app.post("/get_team_id")
 async def get_team_id(request):
     try:
         account = request.json['account']
-        sql = 'SELECT `team_id` FROM `user_info` WHERE account=' + '\'' + account + '\''
+        sql = 'SELECT `team_id` FROM `user_info` WHERE `account`=\'{}\''.format(account)
         result = db_fetchone(sql)
         return json(result)
+
     except Exception as e:
         print(str(e))
         return text("Explode")
@@ -1143,9 +1155,14 @@ async def get_team_id(request):
 async def get_team_member(request):
     try:
         id = request.json['id']
-        sql = 'SELECT * FROM `teams` WHERE id=' + str(id)
+
+        sql = 'SELECT * FROM `teams` WHERE `id`=\'{}\''.format(id)
         result = db_fetchone(sql)
-        return json(result)
+        if result == None:
+            return text("nonexistent")
+        else:
+            return json(result)
+
     except Exception as e:
         print(str(e))
         return text("Explode")
@@ -1162,26 +1179,29 @@ async def get_team_profile(requset):
 
         sql = 'SELECT * FROM `teams` WHERE `id`=\'{}\''.format(id)
         member_list = db_fetchone(sql)
+        if member_list == None:
+            return text("nonexistent")
 
-        member_num = 0
-        for i in member_list.keys():
-            if (member_list[i] != '') and (i != 'id'):
-                member_num += 1
-                sql = 'SELECT `name` FROM `user_info` WHERE `account`=\'{}\''.format(member_list[i])
-                member_name = db_fetchone(sql)
-                name.setdefault(member_list[i], member_name['name'])
-                sql = 'SELECT `career` FROM `user_skill` WHERE `account`=\'{}\''.format(member_list[i])
-                member_skill = db_fetchone(sql)
-                career.setdefault(member_list[i], member_skill['career'])
-        
-        num['member_num'] = member_num
-        team['team_num'] = [num]
-        team['member_name'] = [name]
-        team['member_career'] = [career]
-        team_profile = js.dumps(team)
-        
-        pprint(team_profile)
-        return text(team_profile)
+        else:
+            member_num = 0
+            for i in member_list.keys():
+                if (member_list[i] != '') and (i != 'id'):
+                    member_num += 1
+                    sql = 'SELECT `name` FROM `user_info` WHERE `account`=\'{}\''.format(member_list[i])
+                    member_name = db_fetchone(sql)
+                    name.setdefault(member_list[i], member_name['name'])
+                    sql = 'SELECT `career` FROM `user_skill` WHERE `account`=\'{}\''.format(member_list[i])
+                    member_skill = db_fetchone(sql)
+                    career.setdefault(member_list[i], member_skill['career'])
+            
+            num['member_num'] = member_num
+            team['team_num'] = [num]
+            team['member_name'] = [name]
+            team['member_career'] = [career]
+            team_profile = js.dumps(team)
+            
+            pprint(team_profile)
+            return text(team_profile)
     
     except Exception as e:
         print(e)
