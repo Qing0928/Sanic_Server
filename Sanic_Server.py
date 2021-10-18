@@ -453,6 +453,7 @@ def compute_action(team_id):
         for i in range (0, len(result)):
             tmp = result[i]
             #沒進來就跳掉
+            print(tmp)
             if (chk != 0):
                 print('還不用處理')
                 break
@@ -487,7 +488,6 @@ def compute_action(team_id):
                 if b_weaken_status['sleep'] > 0:
                     skill_times *= 1.5
 
-
                 #是否可以行動
                 if (tmp['action'] == 'numb') or (tmp['action'] == 'gather') or (tmp['action'] == 'sleep'):
                     print(str(tmp['account']) + ':' + '無法行動 why:' + str(tmp['action']))
@@ -503,7 +503,6 @@ def compute_action(team_id):
                         #取得職業類型
                         sql = 'SELECT `career` FROM `user_skill` WHERE account=\'{account}\''
                         career_result = db_fetchone(sql.format(account=tmp['account']))
-
                         #fighter
                         if career_result['career'] == 'fighter':
                             try:
@@ -689,8 +688,12 @@ def compute_action(team_id):
                                 print('[ERROR] career:assistant action:' + str(tmp['action']))
                         
                     elif tmp['action'] == 'item_1':
-                        sql = 'UPDATE `status_{team_id}` SET `hp`=hp+100 WHERE `account`=\'{target}\''
-                        fight_modify(sql.format(team_id=team_id, account=tmp['target']))
+                        try:
+                            sql = 'UPDATE `status_{team_id}` SET `hp`=hp+100 WHERE `account`=\'{target}\''
+                            fight_modify(sql.format(team_id=team_id, target=tmp['target']))
+                        except Exception as e:
+                            print(e)
+                            print('[ERROR] item_1 miss:' + str(tmp['action']) + ';target:' + str(tmp['target']))
 
                     elif tmp['action'] == 'item_2':
                         sql = 'UPDATE `status_{team_id}` SET `numb`=0,`poison`=0,`blood`=0 WHERE `account`=\'{target}\''
