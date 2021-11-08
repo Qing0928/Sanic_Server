@@ -877,13 +877,16 @@ def compute_action(team_id):
 @app.get("/test")
 async def test(request):
     try:
-        return text("Hello World")
+        return text("Hello World", headers={"Access-Control-Allow-Origin":"*"})
     except Exception as e:
         return text(str(e))
 
 @app.get("/favicon.ico")
 async def fav(request):
     return text("nothing")
+@app.middleware("response")
+async def add_csp(request, response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
 #-----------------------------------------------------------------------------------------------------
 #about item issue
 @app.post("/user_item")
@@ -1164,7 +1167,7 @@ async def get_team_member(request):
         if result == None:
             return text("nonexistent")
         else:
-            return json(result)
+            return json(result, headers={"Access-Control-Allow-Origin":"*"})
 
     except Exception as e:
         print(str(e))
