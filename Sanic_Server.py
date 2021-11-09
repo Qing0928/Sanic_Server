@@ -1,124 +1,15 @@
 from datetime import datetime
 from sanic import Sanic
 from sanic.response import json, text
-import pymysql.cursors
 from random import randint,choices
-import time
 import json as js
 import threading
 from pprint import pprint
+from ConnectSession import *
 
 app = Sanic("ARGame_Server")
 #lock = threading.Lock()#多執行緒鎖定
-
 #db function
-def db_fetchall(sql):
-    result = ''
-    try:
-        db_conn = pymysql.Connect(
-        host='127.0.0.1', 
-        user='pmauser', 
-        password='game0934', 
-        db='game_sql', #db='game_sql'
-        cursorclass=pymysql.cursors.DictCursor)
-
-        with db_conn.cursor() as cur:
-            cur.execute(sql)
-            result = cur.fetchall()
-        return result
-
-    except Exception as e:
-        return e
-
-def db_fetchone(sql):
-    result = ''
-    try:
-        db_conn = pymysql.Connect(
-        host='127.0.0.1', 
-        user='pmauser', 
-        password='game0934', 
-        db='game_sql', #db='game_sql'
-        cursorclass=pymysql.cursors.DictCursor)
-
-        with db_conn.cursor() as cur:
-            cur.execute(sql)
-            result = cur.fetchone()
-        return result
-
-    except Exception as e:
-        return e
-
-def db_modify(sql):
-    result = ''
-    try:
-        db_conn = pymysql.Connect(
-        host='127.0.0.1', 
-        user='pmauser', 
-        password='game0934', 
-        db='game_sql', #db='game_sql'
-        cursorclass=pymysql.cursors.DictCursor)
-
-        with db_conn.cursor() as cur:
-            result = cur.execute(sql)
-        db_conn.commit()
-        return result
-
-    except Exception as e:
-        return e 
-#-----------------------------------------------------------------------------------------------------
-def fight_fetchall(sql):
-    result = ''
-    try:
-        db_conn_fight = pymysql.Connect(
-        host = '127.0.0.1', 
-        user='pmauser', 
-        password='game0934', 
-        db='fight_sql', 
-        cursorclass=pymysql.cursors.DictCursor)
-
-        with db_conn_fight.cursor() as cur:
-            cur.execute(sql)
-            result = cur.fetchall()
-        return result
-
-    except Exception as e:
-        return e
-
-def fight_fatchone(sql):
-    result = ''
-    try:
-        db_conn_fight = pymysql.Connect(
-        host = '127.0.0.1', 
-        user='pmauser', 
-        password='game0934', 
-        db='fight_sql', 
-        cursorclass=pymysql.cursors.DictCursor)
-
-        with db_conn_fight.cursor() as cur:
-            cur.execute(sql)
-            result = cur.fetchone()
-        return result
-
-    except Exception as e:
-        return e
-
-def fight_modify(sql):
-    result = ''
-    try:
-        db_conn_fight = pymysql.Connect(
-        host = '127.0.0.1', 
-        user='pmauser', 
-        password='game0934', 
-        db='fight_sql', 
-        cursorclass=pymysql.cursors.DictCursor)
-
-        with db_conn_fight.cursor() as cur:
-            result = cur.execute(sql)
-        db_conn_fight.commit()
-        return result
-
-    except Exception as e:
-        return e 
 #-----------------------------------------------------------------------------------------------------
 #prototype of status & action table 
 status_table = 'CREATE TABLE IF NOT EXISTS `status_{id}`( \
@@ -219,6 +110,14 @@ business = {
     'skill_4':'UPDATE `status_{team_id}` SET `hp`=hp-{num} WHERE `account`!=\'boss\'', 
     'skill_41':'UPDATE `status_{team_id}` SET `drop_sk2`=drop_sk2+2,`numb`=numb+2 WHERE `account`!=\'boss\''
     }
+
+design = {
+    'skill_1':'UPDATE `status_{}` SET `enhance_sk3`=enhance_sk3+3 WHERE `account`!=\'boss\'', 
+    'skill_2':'UPDATE `status_{}` SET `hp`=hp-140,`sleep`=sleep+2 WHERE `account`=\'boss\'', 
+    'skill_21':'UPDATE `status_{}` SET `hp`=hp-100 WHERE `account`!=\'boss\'', 
+    'skill_3':'UPDATE `status_{}` SET `hp`=hp-175,`drop_de2`=drop_de2+3 WHERE `account`=\'boss\'', 
+    'skill_4':'UPDATE `status_{}` SET `immortal`=immortal+3 WHERE `account`=\'boss\''
+}
 #-----------------------------------------------------------------------------------------------------
 #produce_boss_action
 def produce_boss_action(team_id):
@@ -361,32 +260,36 @@ def produce_boss_action(team_id):
 
         elif (b_type == 'design'):
             remain_hp = b_hp / 2000
-            sql = 'SELECT `action` FROM `action_{team_id}` WHERE `account`=\'boss\''
-            result = fight_fatchone(sql.format(team_id=team_id))
+            sql = 'SELECT `action` FROM `action_{}` WHERE `account`=\'boss\''
+            result = fight_fatchone(sql.format(team_id))
 
-            sql = 'SELECT `immortal` FROM `status_{team_id}` WHERE `account`=\'boss\''
-            immortal_result = fight_fatchone(sql.format(team_id=team_id))
-            if (remain_hp <= 0.2) and (immortal_result['immortal'] == 0):
-                sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_4\' WHERE `account`=\'boss\''
-                action = 'skill_4'
-                fight_modify(sql.format(team_id=team_id))
+            sql = 'SELECT `immortal` FROM `status_{}` WHERE `account`=\'boss\''
+            immortal_result = fight_fatchone(sql.format(team_id))
+            if (b_hp == 1) and (immortal_result['immortal'] == 0):
+                sql = 'UPDATE `status_{}` SET `hp`=0 WHERE `account`=\'boss\''.format(team_id)
+                fight_modify(sql)
+
+            elif (b_hp == 1) and (immortal_result['immortal'] != 0):
+                action_list = ['skill_1', 'skill_2', 'skill_3']
+                action = choices(action_list, weights=[3, 3, 3])
+                sql = 'UPDATE `action_{}` SET `action`=\'{}\' WHERE `account`=\'boss\''.format(team_id, action[0])
+
+            elif (remain_hp <= 0.2) and (immortal_result['immortal'] == 0):
+                sql = 'UPDATE `action_{}` SET `action`=\'skill_4\' WHERE `account`=\'boss\''
+                fight_modify(sql.format(team_id))
 
             else:
                 if (result['action'] == 'skill_1') and (remain_hp > 0.2):
-                    sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_2\' WHERE `account`=\'boss\''
-                    action = 'skill_2'
-                    fight_modify(sql.format(team_id=team_id))
-                    
+                    sql = 'UPDATE `action_{}` SET `action`=\'skill_2\' WHERE `account`=\'boss\''
+                    fight_modify(sql.format(team_id))
 
                 if (result['action'] == 'skill_2') and (remain_hp > 0.2):
-                    sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_3\' WHERE `account`=\'boss\''
-                    action = 'skill_3'
-                    fight_modify(sql.format(team_id=team_id))
+                    sql = 'UPDATE `action_{}` SET `action`=\'skill_3\' WHERE `account`=\'boss\''
+                    fight_modify(sql.format(team_id))
                     
                 if (result['action'] == 'skill_3') and (remain_hp > 0.2):
-                    sql = 'UPDATE `action_{team_id}` SET `action`=\'skill_1\' WHERE `account`=\'boss\''
-                    action = 'skill_1'
-                    fight_modify(sql.format(team_id=team_id))
+                    sql = 'UPDATE `action_{}` SET `action`=\'skill_1\' WHERE `account`=\'boss\''
+                    fight_modify(sql.format(team_id))
                     
         elif (b_type == 'future'):
             remain_hp = b_hp /2000
@@ -453,7 +356,7 @@ def compute_action(team_id):
         for i in range (0, len(result)):
             tmp = result[i]
             #沒進來就跳掉
-            print(tmp)
+            #print(tmp)
             if (chk != 0):
                 print('還不用處理')
                 break
@@ -862,13 +765,38 @@ def compute_action(team_id):
                     print(e)
                     print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
 
-        else:
-            print('boss無法行動 why ' + 'numb:' + str(action_enable['numb']) + ' sleep:' + str(action_enable['sleep']))
+            elif b_type['b_type'] == 'design':
+                try:
+                    if result['action'] == 'skill_1':
+                        sql = design['skill_1'].format(team_id)
+                        fight_modify(sql)
+                    elif result['action'] == 'skill_2':
+                        sql = design['skill_2'].format(team_id)
+                        fight_modify(sql)
+                        sql = design['skill_21'].format(team_id)
+                        fight_modify(sql)
+                    elif result['action'] == 'skill_3':
+                        sql = design['skill_3'].format(team_id)
+                        fight_modify(sql)
+                    elif result['action'] == 'skill_4':
+                        sql = design['skill_4'].format(team_id)
+                        fight_modify(sql)
 
-        #清空動作
-        '''sql = 'UPDATE `action_{team_id}` SET `action`=\'\',`target`=\'\',`clear_lock`=\'0\''
-        clear_result = fight_modify(sql.format(team_id=team_id))
-        print('動作已經清空，清空行數:' + str(clear_result))'''
+                    #技能4的不死效果發動，hp固定為1
+                    sql = 'SELECT `immortal` FROM `status_{}` WHERE `account`=\'boss\''.format(team_id)
+                    immortal_result = db_fetchone(sql)
+                    if immortal_result['immortal'] != 0:
+                        sql = 'UPDATE `status_{}` SET `hp`=1 WHERE `account`=\'boss\''.format(team_id)
+                        fight_modify(sql)
+                    else:
+                        pass
+                except Exception as e:
+                    print(e)
+                    print('[ERROR] b_type:' + str(b_type['b_type']) + ' action:' + str(result['action']))
+
+        else:
+            #print('boss無法行動 why ' + 'numb:' + str(action_enable['numb']) + ' sleep:' + str(action_enable['sleep']))
+            print('boss無法行動 why numb:{} sleep:{}'.format(action_enable['numb'], action_enable['sleep']))
         
     except Exception as e:
         print(e)
@@ -884,9 +812,6 @@ async def test(request):
 @app.get("/favicon.ico")
 async def fav(request):
     return text("nothing")
-@app.middleware("response")
-async def add_csp(request, response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
 #-----------------------------------------------------------------------------------------------------
 #about item issue
 @app.post("/user_item")
@@ -1447,7 +1372,6 @@ async def new_turn(requset):
             tmp_key = list(result[j].keys())
             update_chk = False
             for i in range (0, len(tmp_key)):
-                #print(result[j])
                 if tmp_key[i] == 'account':
                     continue
                 elif result[j][tmp_key[i]] == 0:
