@@ -805,6 +805,7 @@ def compute_action(team_id):
 @app.get("/test")
 async def test(request):
     try:
+        print("request ip is \'{}\'".format(request.ip))
         return text("Hello World", headers={"Access-Control-Allow-Origin":"*"})
     except Exception as e:
         return text(str(e))
@@ -812,6 +813,19 @@ async def test(request):
 @app.get("/favicon.ico")
 async def fav(request):
     return text("nothing")
+#-----------------------------------------------------------------------------------------------------
+#reset
+@app.get("/reset")
+async def reset(request):
+    try:
+        sql = 'UPDATE `user_info` SET `play_status`=\'0\',`team_id`=\'0\''
+        db_modify(sql)
+        sql = 'TRUNCATE TABLE `teams`'
+        db_modify(sql)
+    except Exception as e:
+        print(e)
+        return text("reset error")
+
 #-----------------------------------------------------------------------------------------------------
 #about item issue
 @app.post("/user_item")
